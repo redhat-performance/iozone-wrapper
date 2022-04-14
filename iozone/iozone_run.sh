@@ -120,9 +120,101 @@ modes2run=0;
 args_fs_types=""
 
 tools_git=https://github.com/dvalinrh/test_tools
+
+#
+# Help message
+#
+usage()
+{
+	echo "Wrapper specific options"
+	echo "======================================================================"
+	echo "all_test: executes all the predefined tests, which currently are"
+	echo "    incache, incache_fsync, incache_mmap, incache_fsync, incache_mmap"
+ 	echo "    out_of_cach dio."
+	echo "devices_to_use <dev_a, dev_b>: comma separate list of devices to create"
+	echo "   the filesystem on. Default none."
+	echo "dio_filelimit <MB>: maximun size the file may be when doing directio."
+	echo "   default is 4096"
+	echo "directio: run test as directio"
+	echo "eatmem: Run the program eatmem to reduce memory usage for out-of-cache"
+	echo "    Disabled by default"
+	echo "eatmem_out_of_cache_start: Starting amount of memory to be consumed."
+	echo "    Default is 128"
+	echo "eatmem_out_of_cache_end: End amount of memory to be consumed."
+	echo "    Default is 1024"
+	echo "file_count_list <1,2....>: Comma separated list of how many files to be"
+	echo "    created on each filesystem. Default is 1."
+	echo "filesystems <xfs,ext4,ext3,gfs,gfs2>: comma separted list of filesystem"
+	echo "    types to test. Default is xfs"
+	echo "help: usage message"
+	echo "incache: run the test so the files fit in cache."
+	echo "max_file_size <x>:  Total size of all files created.  Size is in G."
+	echo "    Default is 10"
+	echo "mount_location <dir>:  Directory where all mount directories are to"
+	echo "    be created.  Default is /iozone/iozone"
+	echo "incache_filelimit <xMB>:  Maximum file size to use for in cache test."
+	echo "    Default is 4096."
+	echo "iozone_kit <kit>:  Which izone kit version to pull."
+	echo "    Default is ${iozone_kit}"
+	echo "outofcache: Run the test so the files are out of cache.  Default is not to"
+	echo "outcache_multiplier <x>: Multiplier for max out of cache file size"
+	echo "    compared to incache size.  Default is 4."
+	echo "results_dir <dir>:  Where to place the results from the run.  The default"
+	echo "   is the <current directory>/results"
+	echo "swap: Turn off swap during testing, and reenable it when done."
+	echo "syncedincache: Run the test incache with fsync"
+	echo "test_prefix <string>:  Prefix to add to the results file."
+	echo "   Default is test_run"
+	echo "tools_git: Pointer to the test_tools git.  Default is ${tools_git}.  Top directory is always test_tools"
+	echo "tunecompare: perform tune comparison, default is off"
+	echo "   Values tuning:"
+	echo "		vm.dirty_ratio: 85"
+	echo "		vm.dirty_background_ratio: 80"
+	echo "		vm.swappiness: 0"
+	echo "verbose: Set the shell verbose flag"
+	echo "======================================================================"
+	echo "iozone options"
+	echo "======================================================================"
+	echo "auto: operate in auto mode"
+	echo "iozone_umount: remount between tests.  Only 1 mount point supported."
+	echo "    Defaul is no"
+	echo "page_size <x>: Minimum file size in kBytes for auto mode. Default is 1024"
+	echo "quick <x>: Factor used to speed-up the runs."
+	echo "   incache_memory=incache_memory/do_quick.  Default is 1"
+	echo "test_type: Comma separated list of tests to run.  Default is 0,1"
+	echo "======================================================================"
+	echo "Examples"
+	echo "======================================================================"
+	echo "Test: incache, using iozone tests 0 then 1"
+	echo "results: current directory/testing."
+	echo "filesys: xfs"
+	echo "Mount location: /iozone/iozone"
+	echo "Disk to use: /dev/nvme3n1"
+	echo "number of files: 1,2 and 4"
+	echo "Total file size:  Default of 10G"
+	echo "${exec_file} --incache --results_dir `pwd`/testing --test_type 0,1"
+	echo "   --mount_location /iozone/iozone0 --devices_to_use /dev/nvme3n1"
+	echo "   --filesys xfs --file_count_list 1,2,4 --auto"
+	echo ""
+	echo "Test: incache, using iozone tests 0 through 12"
+	echo "results: current directory/testing."
+	echo "filesys: xfs"
+	echo "Mount location: /iozone/iozone"
+	echo "Number files per mount point: 1 and 2"
+	echo "Test prefix: io_test_all"
+	echo "Total file size:  Default of 64G"
+	echo "Disk to use: /dev/nvme3n1 and /dev/nvme2n1"
+	echo "${exec_file} --incache --results_dir `pwd`/dave --mount_location /iozone/iozone"
+	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesys xfs --file_count_list 1,2"
+	echo "   --test_prefix io_test_all --max_file_size 64"
+	echo "   --test_type 0,1,2,3,4,5,6,7,8,9,10,11,12"
+	source test_tools/general_setup --usage
+}
+
 #
 # Clone the repo that contains the common code and tools
 #
+report_usage=0
 found=0
 for arg in "$@"; do
 	if [ $found -eq 1 ]; then
@@ -139,7 +231,7 @@ for arg in "$@"; do
 	# result in the script exiting with out giving the test options.
 	#
 	if [[ $arg == "--usage" ]]; then
-		usage $0
+		report_usage=1
 	fi
 done
 
@@ -153,6 +245,10 @@ if [ ! -d "test_tools" ]; then
                 echo pulling git $tools_git failed.
                 exit 1
         fi
+fi
+
+if [ $report_usage -eq 1 ]; then
+	usage $0
 fi
 
 # Variables set by general setup.
@@ -1185,96 +1281,6 @@ obtain_disks()
 		disks_found=`echo $disks | tr -d -c ' '  | awk '{ print length; }'`
 		let "disks_found=${disks_found}+1"
 	fi
-}
-
-#
-# Help message
-#
-usage()
-{
-	echo "Wrapper specific options"
-	echo "======================================================================"
-	echo "all_test: executes all the predefined tests, which currently are"
-	echo "    incache, incache_fsync, incache_mmap, incache_fsync, incache_mmap"
- 	echo "    out_of_cach dio."
-	echo "devices_to_use <dev_a, dev_b>: comma separate list of devices to create"
-	echo "   the filesystem on. Default none."
-	echo "dio_filelimit <MB>: maximun size the file may be when doing directio."
-	echo "   default is 4096"
-	echo "directio: run test as directio"
-	echo "eatmem: Run the program eatmem to reduce memory usage for out-of-cache"
-	echo "    Disabled by default"
-	echo "eatmem_out_of_cache_start: Starting amount of memory to be consumed."
-	echo "    Default is 128"
-	echo "eatmem_out_of_cache_end: End amount of memory to be consumed."
-	echo "    Default is 1024"
-	echo "file_count_list <1,2....>: Comma separated list of how many files to be"
-	echo "    created on each filesystem. Default is 1."
-	echo "filesystems <xfs,ext4,ext3,gfs,gfs2>: comma separted list of filesystem"
-	echo "    types to test. Default is xfs"
-	echo "help: usage message"
-	echo "incache: run the test so the files fit in cache."
-	echo "max_file_size <x>:  Total size of all files created.  Size is in G."
-	echo "    Default is 10"
-	echo "mount_location <dir>:  Directory where all mount directories are to"
-	echo "    be created.  Default is /iozone/iozone"
-	echo "incache_filelimit <xMB>:  Maximum file size to use for in cache test."
-	echo "    Default is 4096."
-	echo "iozone_kit <kit>:  Which izone kit version to pull."
-	echo "    Default is ${iozone_kit}"
-	echo "outofcache: Run the test so the files are out of cache.  Default is not to"
-	echo "outcache_multiplier <x>: Multiplier for max out of cache file size"
-	echo "    compared to incache size.  Default is 4."
-	echo "results_dir <dir>:  Where to place the results from the run.  The default"
-	echo "   is the <current directory>/results"
-	echo "swap: Turn off swap during testing, and reenable it when done."
-	echo "syncedincache: Run the test incache with fsync"
-	echo "test_prefix <string>:  Prefix to add to the results file."
-	echo "   Default is test_run"
-	echo "tools_git: Pointer to the test_tools git.  Default is ${tools_git}.  Top directory is always test_tools"
-	echo "tunecompare: perform tune comparison, default is off"
-	echo "   Values tuning:"
-	echo "		vm.dirty_ratio: 85"
-	echo "		vm.dirty_background_ratio: 80"
-	echo "		vm.swappiness: 0"
-	echo "verbose: Set the shell verbose flag"
-	echo "======================================================================"
-	echo "iozone options"
-	echo "======================================================================"
-	echo "auto: operate in auto mode"
-	echo "iozone_umount: remount between tests.  Only 1 mount point supported."
-	echo "    Defaul is no"
-	echo "page_size <x>: Minimum file size in kBytes for auto mode. Default is 1024"
-	echo "quick <x>: Factor used to speed-up the runs."
-	echo "   incache_memory=incache_memory/do_quick.  Default is 1"
-	echo "test_type: Comma separated list of tests to run.  Default is 0,1"
-	echo "======================================================================"
-	echo "Examples"
-	echo "======================================================================"
-	echo "Test: incache, using iozone tests 0 then 1"
-	echo "results: current directory/testing."
-	echo "filesys: xfs"
-	echo "Mount location: /iozone/iozone"
-	echo "Disk to use: /dev/nvme3n1"
-	echo "number of files: 1,2 and 4"
-	echo "Total file size:  Default of 10G"
-	echo "${exec_file} --incache --results_dir `pwd`/testing --test_type 0,1"
-	echo "   --mount_location /iozone/iozone0 --devices_to_use /dev/nvme3n1"
-	echo "   --filesys xfs --file_count_list 1,2,4 --auto"
-	echo ""
-	echo "Test: incache, using iozone tests 0 through 12"
-	echo "results: current directory/testing."
-	echo "filesys: xfs"
-	echo "Mount location: /iozone/iozone"
-	echo "Number files per mount point: 1 and 2"
-	echo "Test prefix: io_test_all"
-	echo "Total file size:  Default of 64G"
-	echo "Disk to use: /dev/nvme3n1 and /dev/nvme2n1"
-	echo "${exec_file} --incache --results_dir `pwd`/dave --mount_location /iozone/iozone"
-	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesys xfs --file_count_list 1,2"
-	echo "   --test_prefix io_test_all --max_file_size 64"
-	echo "   --test_type 0,1,2,3,4,5,6,7,8,9,10,11,12"
-	source test_tools/general_setup --usage
 }
 
 create_lvm()
