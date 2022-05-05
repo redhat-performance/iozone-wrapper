@@ -20,8 +20,14 @@
 #
 # Automate the iozone benchmark.
 #
-chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
-run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+
+if [[ $0 == "./"* ]]; then
+	run_dir=`pwd`
+else
+	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+fi
+
 arguments="$@"
 test_name="iozone"
 
@@ -119,7 +125,7 @@ swap_disabled=0
 modes2run=0;
 args_fs_types=""
 
-tools_git=https://github.com/dvalinrh/test_tools
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
 
 #
 # Help message
@@ -240,7 +246,7 @@ done
 # clone the repo.
 #
 if [ ! -d "test_tools" ]; then
-        git clone $tools_git
+        git clone $tools_git test_tools
         if [ $? -ne 0 ]; then
                 echo pulling git $tools_git failed.
                 exit 1
