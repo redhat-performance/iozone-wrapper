@@ -536,6 +536,8 @@ do_test()
 				for count in `seq 1 $numb_files`;
 				do
 					file_list=${file_list}${separ}/${mount_pnt}/file_${count}
+					rm /${mount_pnt}/file_${count}
+					${run_dir}/create_file /${mount_pnt}/file_${count} $max_file_size
 					separ=" "
 					let "total_files=$total_files+1"
 				done
@@ -1528,8 +1530,8 @@ fi
 if [ $to_pbench -eq 1 ]; then
         source ~/.bashrc
 
-	echo $TOOLS_BIN/execute_via_pbench_1 --cmd_executing "$0" ${arguments} --test $test_name --spacing 11
-	$TOOLS_BIN/execute_via_pbench_1 --cmd_executing "$0" ${arguments} --test iozone --spacing 11
+	echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" ${arguments} --test $test_name --spacing 11
+	$TOOLS_BIN/execute_pbench --cmd_executing "$0" ${arguments} --test iozone --spacing 11
 	exit 0
 fi
 
@@ -1548,6 +1550,16 @@ if [[ $results_dir == "" ]]; then
 		results_dir=`pwd`
 	fi
 fi
+
+pushd $run_dir
+gcc -Wall -Os -o create_file create_file.c
+if [ -x "$run_dir/create_file" ]; then
+	echo "$run_dir/create_file"
+else
+	echo Warning create_file did not build, aborting
+	exit 1
+fi
+popd
 
 obtain_disks
 
@@ -1596,6 +1608,7 @@ for fs in $filesystems; do
 			mount_pnt=${mount_location}${mount_index}
 			mkdir -p ${mount_pnt} >& /dev/null
 			umount $mount_pnt >& /dev/null
+			wipefs $device
 			$TOOLS_BIN/create_filesystem --fs_type $fs --mount_dir $mount_pnt --device $device
 			if [ $? -ne 0 ]; then
 				echo create filesystem create failed.
@@ -1610,9 +1623,9 @@ for fs in $filesystems; do
 	execute_it $fs
 	if [ $mount_index  -ne 0 ]; then
 		if [ $lvm_disk -eq 1 ]; then
-                	$TOOLS_BIN/lvm_delete --lvm_vol iozone --lvm_grp iozone --mount_pnt ${mount_list}
+			$TOOLS_BIN/lvm_delete --lvm_vol iozone --lvm_grp iozone --mount_pnt ${mount_list}
 		else
-                	$TOOLS_BIN/umount_filesystems --mount_pnt ${mount_location} --number_mount_pnts ${mount_index}
+			$TOOLS_BIN/umount_filesystems --mount_pnt ${mount_location} --number_mount_pnts ${mount_index}
 		fi
 	fi
 done
