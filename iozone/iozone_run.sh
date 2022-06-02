@@ -1530,8 +1530,11 @@ fi
 if [ $to_pbench -eq 1 ]; then
         source ~/.bashrc
 
-	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test $test_name --spacing 11
-	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test iozone --spacing 11
+	for ((run_number=1; run_number <= to_times_to_run ; run_number++))
+	do
+		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test $test_name --spacing 11
+		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test iozone --spacing 11
+	done
 	exit 0
 fi
 
