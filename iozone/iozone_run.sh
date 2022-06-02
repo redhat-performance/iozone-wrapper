@@ -133,6 +133,12 @@ modes2run=0;
 args_fs_types=""
 
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
+#
+# Config info
+#
+disk_type=""
+disk_size=""
+disk_numb=""
 
 #
 # Help message
@@ -579,8 +585,8 @@ do_test_actual()
 
 	for one_run in $run_types; do
 		runtest_fq_name=${runtest_name}"_"${one_run}
-		iozone_output_file=${analysis_dir}/${fstype}/iozone_${test_prefix}_${runtest_fq_name}.iozone
-		iozone_analysis_file=${analysis_dir}/${fstype}/iozone_${runtest_fq_name}_analysis+rawdata.log
+		iozone_output_file=${analysis_dir}/${fstype}/iozone_${test_prefix}_${runtest_fq_name}_dt_${disk_type}_ds_${disk_size}_dn_${disk_numb}.iozone
+		iozone_analysis_file=${analysis_dir}/${fstype}/iozone_${runtest_fq_name}_dt_${disk_type}_ds_${disk_size}_dn_${disk_numb}_analysis+rawdata.log
 		if [[ -d "${mount_location}" && ${do_iozone_umount} == 1 ]]; then
 			export iozone_args="-U ${data_mnt_pt} ${iozone_args}"
 		fi
@@ -1521,6 +1527,9 @@ while [[ $# -gt 0 ]]; do
 	esac
 	shift;
 done
+disk_type=`echo $to_configuration | cut -d'_' -f2 | cut -d'=' -f2`
+disk_size=`echo $to_configuration | cut -d'=' -f3 | cut -d'_' -f 1`
+disk_numb=`echo $to_configuration | cut -d'=' -f4 | cut -d'_' -f 1`
 
 if [ `id -u` -ne 0 ]; then
 	printf "You need to run as root\n"
