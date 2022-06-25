@@ -21,13 +21,13 @@
 # Automate the iozone benchmark.
 #
 
+curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
 		run_dir=`pwd`
 	else
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
-		curdir=`pwd`
 		run_dir="${curdir}${run_dir}"
 	fi
 else
@@ -1642,6 +1642,7 @@ for fs in $filesystems; do
 	fi
 done
 
+cp ${curdir}/meta_data.yml $results_dir
 if [[ $auto -eq 0 ]]; then
 	reduce_non_auto_data $iozone_output_file > $out_dir/iozone_summary
 	cp -R ${results_dir} $out_dir
