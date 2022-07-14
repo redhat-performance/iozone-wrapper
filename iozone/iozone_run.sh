@@ -35,8 +35,18 @@ else
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
 fi
 
+
 arguments="$@"
 test_name="iozone"
+
+if [ ! -f "/tmp/${test_name}.out" ]; then
+        command="${0} $@"
+        echo $command
+        $command &> /tmp/${test_name}.out
+        cat /tmp/${test_name}.out
+        rm /tmp/${test_name}.out
+        exit
+fi
 
 exec_name=$0
 # Default settings
@@ -1642,6 +1652,13 @@ for fs in $filesystems; do
 	fi
 done
 
+if [[ $run_results != "PASS"  ]]; then
+        echo Failed >> ${results_dir}/test_results_report
+else
+        echo Ran >> ${results_dir}/test_results_report
+fi
+
+
 cp ${curdir}/meta_data.yml $results_dir
 if [[ $auto -eq 0 ]]; then
 	reduce_non_auto_data $iozone_output_file > $out_dir/iozone_summary
@@ -1650,6 +1667,8 @@ else
 	cp -R ${results_dir} ${out_dir}
 	
 fi
+
+cp /tmp/${test_name}.out ${out_dir}
 pushd /tmp > /dev/null
-tar cf $odir.tar $odir
+tar cf $odir.tar ${out_dir}
 popd > /dev/null
