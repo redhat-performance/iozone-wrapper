@@ -1213,7 +1213,8 @@ execute_it()
 	cd `dirname ${results_dir}`
 	archive_dirname=./`basename ${results_dir}`
 	rm -f results_pbench.tar
-	find -L $archive_dirname} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
+	cp /tmp/results.csv ${archive_dirname} 
+	find -L ${archive_dirname} -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 	tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
 
 	# Re-enable swap
@@ -1224,6 +1225,7 @@ execute_it()
 
 reduce_non_auto_data()
 {
+	header=0
 	first_found=0
 	cmd_line_display=0
 	total_threads=0
@@ -1295,6 +1297,11 @@ reduce_non_auto_data()
 			echo Min tp per proc: $min_tp
 			echo Average tp per proc: $average_tp
 			first_found=0
+			if [ $header -eq 0 ]; then
+				header=1 
+				echo processes:test_type:file_sze:record_size:Total_througput >> /tmp/results.csv
+			fi
+			echo ${procs}:${test_type}:${file_size}:${record_size}:${total_tp} >> /tmp/results.csv
 		fi
 	done  < "${1}"
 }
