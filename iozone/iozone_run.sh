@@ -1212,6 +1212,8 @@ execute_it()
 	archive_file="iozone-results.tar.gz"
 	cd `dirname ${results_dir}`
 	archive_dirname=./`basename ${results_dir}`
+	rm -f results_pbench.tar
+	find -L $archive_dirname} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
 	tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
 
 	# Re-enable swap
