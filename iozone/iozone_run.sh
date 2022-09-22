@@ -1207,15 +1207,6 @@ execute_it()
 		run_results=WARN;
 	fi
 
-	# Archive results into single tarball
-	#
-	archive_file="iozone-results.tar.gz"
-	cd `dirname ${results_dir}`
-	archive_dirname=./`basename ${results_dir}`
-	rm -f results_pbench.tar
-	cp /tmp/results.csv ${archive_dirname} 
-	find -L ${archive_dirname} -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
-	tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
 
 	# Re-enable swap
 	if [[ ${swap_disabled} == 1 ]]; then
@@ -1677,7 +1668,18 @@ else
 	
 fi
 
-cp /tmp/${test_name}.out ${out_dir}
+# Archive results into single tarball
+#
 pushd /tmp > /dev/null
+archive_file="iozone-results.tar.gz"
+cd `dirname ${results_dir}`
+archive_dirname=./`basename ${results_dir}`
+mkdir $archive_dirname
+rm -f results_pbench.tar
+echo mv /tmp/results.csv ${archive_dirname} 
+mv /tmp/results.csv ${archive_dirname} 
+find -L ${archive_dirname} -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
+tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
+cp /tmp/${test_name}.out ${out_dir}
 tar cf $odir.tar ${out_dir}
 popd > /dev/null
