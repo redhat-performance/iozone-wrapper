@@ -21,6 +21,22 @@
 # Automate the iozone benchmark.
 #
 
+exit_out()
+{
+	echo $1
+	exit $2
+}
+
+make_dir()
+{
+	if [[ ! -d $1 ]]; then
+		mkdir -p $1
+		if [ $? -ne 0 ]; then
+			exit_out "Failed to create directory $1" 1
+		fi
+	fi
+}
+
 curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -43,9 +59,12 @@ if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
         $command &> /tmp/${test_name}.out
-        cat /tmp/${test_name}.out
-        rm /tmp/${test_name}.out
-        exit
+	rtc=$?
+	if [[ -f /tmp/${test_name}.out ]]; then
+        	cat /tmp/${test_name}.out
+        	rm /tmp/${test_name}.out
+	fi
+        exit $?
 fi
 
 exec_name=$0
@@ -271,8 +290,7 @@ done
 if [ ! -d "test_tools" ]; then
         git clone $tools_git test_tools
         if [ $? -ne 0 ]; then
-                echo pulling git $tools_git failed.
-                exit 1
+                exit_out "pulling git $tools_git failed." 1
         fi
 fi
 
@@ -423,6 +441,9 @@ retrieve_and_build_iozone()
 		# We need to build iozone. Go get the kit.
 		#
 		wget http://www.iozone.org/src/current/${iozone_kit}.tar
+		if [ $? -ne 0 ]; then
+			exit_out "wget http://www.iozone.org/src/current/${iozone_kit}.tar failed" 1
+		fi
 		tar xf ${iozone_kit}.tar
 		#
 		# cd t the source directory
@@ -447,18 +468,16 @@ retrieve_and_build_iozone()
 				build_target="linux-arm"
 			;;
 			*)
-				echo "Unknown arch ${arch}.  Cant continue";
-				exit 1
+				exit_out "Unknown arch ${arch}.  Cant continue" 1
 			;;
 		esac
 		make ${build_target}  >> ${buildrunlog} 2>&1
 		if [ -x "./iozone" ]; then
 			cp iozone /usr/bin
 		else
-			echo Failed to build iozone, see ${buildrunlog}
-			exit 1
+			exit_out "Failed to build iozone, see ${buildrunlog}" 1
 		fi
-		popd
+		popd >& /dev/null
 	fi
 	iozone_exe=`which iozone`
 }
@@ -468,16 +487,15 @@ retrieve_and_build_iozone()
 #
 build_eatmem()
 {
-	pushd ${run_dir}
+	pushd ${run_dir} >& /dev/null
 	gcc -Wall -Os -o eatmem eatmem.c
 
 	if [ -x "$run_dir//eatmem" ]; then
 		echo "$run_dir/eatmem"
 	else
-		echo Warning eatmem did not build, aborting
-		exit 1
+		exit_out "Warning eatmem did not build, aborting" 1
 	fi
-	popd
+	popd >& /dev/null
 }
 
 #
@@ -662,14 +680,13 @@ do_test_actual()
 			fi
 
 			if [ ${status} -eq 1 ]; then
-		    		touch ${testing_dir}/FAILED
-			else
-				if [[ ${auto} == 1 ]]; then
-					(
-						printf "\n${name_of_test} ANALYSIS:\n\n"
-		    				${run_dir}/analysis-iozone.pl ${iozone_output_file}
-		    			) > ${iozone_analysis_file};
-				fi
+				exit_out "Execution of iozone failed" 1
+			fi
+			if [[ ${auto} == 1 ]]; then
+				(
+					printf "\n${name_of_test} ANALYSIS:\n\n"
+		    			${run_dir}/analysis-iozone.pl ${iozone_output_file}
+		    		) > ${iozone_analysis_file};
 			fi
 
 			if [ ${one_run} == "tuned" ]; then
@@ -792,6 +809,9 @@ set_mem_vals()
 		(( memory_to_take = free_memory - eatmem_free_memory -80 ))
 		${eatmem_exe} ${memory_to_take} &
 		PID=$!
+		#
+		# Give it a chance to do it's thing.
+		#
 		sleep 180
 		sync
 		echo 3 > /proc/sys/vm/drop_caches
@@ -916,7 +936,7 @@ lun_setup()
 		cp /proc/filesystems ${configdir}/filesystems
 	else
 		data_dir=${results_dir}/data
-		mkdir ${data_dir};
+		make_dir $data_dir
 		data_lun=`df --portability ${data_dir} | tail -1 | awk '{ print $1 }'`
 		data_mnt_pt=`df --portability ${data_dir} | tail -1 | awk '{ print $6 }'`
 		iozone_actual_fs_types=`mount -l | grep " on ${data_mnt_pt} " | awk '{ print $5 }'`
@@ -1030,7 +1050,7 @@ verify_disk_cache()
 
 execute_iozone()
 {
-	mkdir ${analysis_dir}/${fstype};
+	make_dir ${analysis_dir}/${fstype}
 
 	if [ ${do_incache} -eq 1 ]; then
 		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
@@ -1044,9 +1064,10 @@ execute_iozone()
 		do_test "In Cache w/ MMAP" "incache+mmap" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
 	fi
 }
+
 execute_iozone_full()
 {
-	mkdir ${analysis_dir}/${fstype};
+	make_dir ${analysis_dir}/${fstype}
 
 	if [ ${do_incache} -eq 1 ]; then
 		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
@@ -1104,7 +1125,7 @@ invoke_test()
 		for ((run_number=1; run_number <= to_times_to_run ; run_number++))
 		do
 			analysis_dir=$results_dir/Run_${run_number}
-			mkdir -p ${analysis_dir}
+			make_dir ${analysis_dir}
 
 			#  Loop over fstype
 
@@ -1184,8 +1205,7 @@ execute_it()
 		#
 		if [ ${incache_memory} -gt ${free_space} ]; then
 			echo data_dir $data_dir
-			echo "Error: Not enough disk space on this system to even run In Cache test.   Cant continue ..."
-			exit 1
+			exit_out "Error: Not enough disk space on this system to even run In Cache test.   Cant continue ..." 1
 		else
 			invoke_test
 		fi
@@ -1302,8 +1322,7 @@ obtain_disks()
 	if [[ $devices_to_use == "grab_disks" ]]; then
 		results=`${TOOLS_BIN}/grab_disks ${devices_to_use}`
 		if [ $? -ne 0 ]; then
-			echo grab disks failed.
-			exit 1
+			exit_out "grab disks failed." 1
 		fi
         	disks_found=`echo $results | cut -d: -f 2`
         	devices_to_use=`echo $results | cut -d: -f 1`
@@ -1319,17 +1338,15 @@ create_lvm()
 	lvm_devices=`echo $devices_to_use | sed "s/ /,/g"`
 	$TOOLS_BIN/lvm_create --devices ${lvm_devices} --lvm_vol iozone --lvm_grp iozone
 	if [ $? -ne 0 ]; then
-		echo lvm create failed, exiting
-		exit 1
+		exit_out "lvm create failed, exiting" 1
 	fi
 
 	mount_pnt=${mount_location}${mount_index}
-	mkdir -p ${mount_pnt} >& /dev/null
+	make_dir ${mount_pnt}
 	umount $mount_pnt >& /dev/null
 	$TOOLS_BIN/create_filesystem --fs_type $1 --mount_dir $mount_pnt --device /dev/iozone/iozone
 	if [ $? -ne 0 ]; then
-		echo create_filesystem failed, exiting
-		exit 1
+		exit_out "create_filesystem failed, exiting" 1
 	fi
 	mount_list=${mount_pnt}
 	let "mount_index=${mount_index}+1"
@@ -1542,8 +1559,7 @@ disk_size=`echo $to_configuration | cut -d'=' -f3 | cut -d'_' -f 1`
 disk_numb=`echo $to_configuration | cut -d'=' -f4 | cut -d'_' -f 1`
 
 if [ `id -u` -ne 0 ]; then
-	printf "You need to run as root\n"
-	exit 1
+	exit_out "You need to run as root" 1
 fi
 
 if [ $to_pbench -eq 1 ]; then
@@ -1573,22 +1589,19 @@ if [[ $results_dir == "" ]]; then
 	fi
 fi
 
-pushd $run_dir
+pushd $run_dir >& /dev/null
 gcc -Wall -Os -o create_file create_file.c
-if [ -x "$run_dir/create_file" ]; then
-	echo "$run_dir/create_file"
-else
-	echo Warning create_file did not build, aborting
-	exit 1
+if [ ! -x "$run_dir/create_file" ]; then
+	exit_out "Error:  create_file did not build, aborting" 1
 fi
-popd
+popd >& /dev/null
 
 obtain_disks
 
 if [[ $to_sys_type != "" ]]; then
 	odir=results_iozone_$to_tuned_setting
 	out_dir="/tmp/${odir}"
-	mkdir $out_dir
+	make_dir $out_dir
 	exec &>> $out_dir/run_output
 fi
 
@@ -1607,12 +1620,12 @@ if [[ $modes2run -eq 0 ]] || [[ $all_test -eq 1 ]]; then
 fi
 
 rm -rf ${results_dir} ${local_watchdog_file} >& /dev/null
-mkdir ${results_dir} ${configdir}
+make_dir ${results_dir}
+make_dir ${configdir}
 touch $buildrunlog
 
 if [[ $mount_location = "" ]]; then
-	echo Need to designate a mount point
-	exit 1
+	exit_out "Need to designate a mount point" 1
 fi
 
 #
@@ -1628,13 +1641,12 @@ for fs in $filesystems; do
 	else
 		for device in $devices_to_use; do
 			mount_pnt=${mount_location}${mount_index}
-			mkdir -p ${mount_pnt} >& /dev/null
+			make_dir ${mount_pnt}
 			umount $mount_pnt >& /dev/null
 			wipefs $device
 			$TOOLS_BIN/create_filesystem --fs_type $fs --mount_dir $mount_pnt --device $device
 			if [ $? -ne 0 ]; then
-				echo create filesystem create failed.
-				exit 1
+				exit_out "echo create filesystem create failed." 1
 			fi
 			mount_list=${mount_list}${separ}${mount_pnt}
 			separ=" "
@@ -1670,11 +1682,11 @@ fi
 
 # Archive results into single tarball
 #
-pushd /tmp > /dev/null
+pushd /tmp >& /dev/null
 archive_file="iozone-results.tar.gz"
 cd `dirname ${results_dir}`
 archive_dirname=./`basename ${results_dir}`
-mkdir $archive_dirname
+make_dir $archive_dirname
 rm -f results_pbench.tar
 echo mv /tmp/results.csv ${archive_dirname} 
 mv /tmp/results.csv ${archive_dirname} 
@@ -1682,4 +1694,4 @@ find -L ${archive_dirname} -type f | tar --transform 's/.*\///g' -cf /tmp/result
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
 cp /tmp/${test_name}.out ${out_dir}
 tar cf $odir.tar ${out_dir}
-popd > /dev/null
+popd >& /dev/null
