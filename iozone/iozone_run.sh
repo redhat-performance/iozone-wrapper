@@ -37,7 +37,59 @@ make_dir()
 	fi
 }
 
+disk_options=""
+
+provide_disks()
+{
+	echo You need to designate disks, following are currently not mounted.
+	tools_bin/grab_disks grab_disks
+	cat disks
+	echo "Enter comma separated list of devices to use: "
+	read devices_to_use
+	device_list=`echo $devices_to_use | sed "s/,/,\/dev\//g"`
+	device_list=/dev/${device_list}
+	disk_options="--devices_to_use ${device_list}"
+}
+
+gen_args_back="$@"
+disks_found=0
+i=1
+j=$#
+while [ $i -le $j ]
+do
+        #
+        # Ansible causing problems again, getting passed }} for some reason from random workloads, filter it out.
+        #
+        case "$1" in
+		--devices_to_use)
+			disks_found=1
+			break
+		;;
+		--usage)
+			#
+			# Do not need disks
+			#
+			disks_found=1
+			break
+		;;
+		--)
+			break
+		;;
+		*)
+			i=$((i + 1))
+			shift 1
+		;;
+	esac
+done
+
+if [ $disks_found -eq 0 ]; then
+        provide_disks
+fi
+
+set -- ${gen_args_back}
+
 curdir=`pwd`
+
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -46,9 +98,15 @@ if [[ $0 == "./"* ]]; then
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
 		run_dir="${curdir}${run_dir}"
 	fi
+elif [[ $0 != "/"* ]]; then
+	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
+	run_dir="${curdir}/${dir}"
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	if [[ $run_dir != "/"* ]]; then
+		run_dir=${curdir}/${run_dir}
+	fi
 fi
 
 
@@ -56,7 +114,7 @@ arguments="$@"
 test_name="iozone"
 
 if [ ! -f "/tmp/${test_name}.out" ]; then
-        command="${0} $@"
+        command="${0} $@ $disk_options"
         echo $command
         $command &> /tmp/${test_name}.out
 	rtc=$?
@@ -181,7 +239,7 @@ usage()
  	echo "    out_of_cach dio."
 	echo "devices_to_use <dev_a, dev_b>: comma separate list of devices to create"
 	echo "   the filesystem on. Default none."
-	echo "dio_filelimit <MB>: maximun size the file may be when doing directio."
+	echo "dio_filelimit <MB>: maximum size the file may be when doing directio."
 	echo "   default is 4096"
 	echo "directio: run test as directio"
 	echo "eatmem: Run the program eatmem to reduce memory usage for out-of-cache"
@@ -240,7 +298,7 @@ usage()
 	echo "Disk to use: /dev/nvme3n1"
 	echo "number of files: 1,2 and 4"
 	echo "Total file size:  Default of 10G"
-	echo "${exec_file} --incache --results_dir `pwd`/testing --test_type 0,1"
+	echo "${exec_name} --incache --results_dir `pwd`/testing --test_type 0,1"
 	echo "   --mount_location /iozone/iozone0 --devices_to_use /dev/nvme3n1"
 	echo "   --filesys xfs --file_count_list 1,2,4 --auto"
 	echo ""
@@ -252,7 +310,7 @@ usage()
 	echo "Test prefix: io_test_all"
 	echo "Total file size:  Default of 64G"
 	echo "Disk to use: /dev/nvme3n1 and /dev/nvme2n1"
-	echo "${exec_file} --incache --results_dir `pwd`/dave --mount_location /iozone/iozone"
+	echo "${exec_name} --incache --results_dir `pwd`/dave --mount_location /iozone/iozone"
 	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesys xfs --file_count_list 1,2"
 	echo "   --test_prefix io_test_all --max_file_size 64"
 	echo "   --test_type 0,1,2,3,4,5,6,7,8,9,10,11,12"
@@ -1331,6 +1389,16 @@ obtain_disks()
 		disks_found=`echo $disks | tr -d -c ' '  | awk '{ print length; }'`
 		let "disks_found=${disks_found}+1"
 	fi
+
+	# verify devices
+
+	for item in $devices_to_use; do
+		value=`file $item`
+		echo $value | grep "block special" > /dev/null
+		if [ $? -ne 0 ]; then
+			exit_out "Error: $item is not a block device" 1
+		fi
+	done
 }
 
 create_lvm()
