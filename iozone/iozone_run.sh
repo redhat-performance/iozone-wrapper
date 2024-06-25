@@ -1685,12 +1685,11 @@ fi
 pushd /tmp >& /dev/null
 
 archive_file="iozone-results.tar.gz"
-archive_dirname="${results_dir}"
-make_dir $archive_dirname
+make_dir $results_dir
 rm -f results_pbench.tar
-echo mv /tmp/results.csv ${archive_dirname} 
-mv /tmp/results.csv ${archive_dirname} 
-pushd ${archive_dirname} > /dev/null
+echo mv /tmp/results.csv ${results_dir} 
+mv /tmp/results.csv ${results_dir} 
+pushd ${results_dir} > /dev/null
 find -L . -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
