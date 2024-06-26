@@ -1683,15 +1683,15 @@ fi
 # Archive results into single tarball
 #
 pushd /tmp >& /dev/null
+
 archive_file="iozone-results.tar.gz"
-cd `dirname ${results_dir}`
-archive_dirname=./`basename ${results_dir}`
-make_dir $archive_dirname
+make_dir $results_dir
 rm -f results_pbench.tar
-echo mv /tmp/results.csv ${archive_dirname} 
-mv /tmp/results.csv ${archive_dirname} 
-find -L ${archive_dirname} -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
-tar cf /tmp/results_iozone_${to_tuned_setting}.tar ${archive_dirname}
-cp /tmp/${test_name}.out ${out_dir}
-tar cf $odir.tar ${out_dir}
+echo mv /tmp/results.csv ${results_dir} 
+mv /tmp/results.csv ${results_dir} 
+pushd ${results_dir} > /dev/null
+find -L . -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
+tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
+popd > /dev/null
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name}_$test --tuned_setting=$to_tuned_setting --version None --user $to_user
 popd >& /dev/null
