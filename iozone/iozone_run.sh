@@ -373,11 +373,6 @@ check_for_numa()
 prep_system()
 {
 	rm -f ${testing_dir}/FAILED >& /dev/null
-	#
-	# Shut down any crond anacron activity.
-	#
-	systemctl stop crond.service
-	systemctl stop anacron.service
 
 	#
 	# Turn off power services
