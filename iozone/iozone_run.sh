@@ -373,29 +373,7 @@ check_for_numa()
 prep_system()
 {
 	rm -f ${testing_dir}/FAILED >& /dev/null
-	#
-	# Shut down any crond anacron activity.
-	#
-	systemctl stop crond.service
-	systemctl stop anacron.service
 
-	#
-	# Turn off power services
-	#
-	systemctl restart cpupower.service
-	systemctl stop cpupower.service
-
-	if [ -d "/sys/devices/system/cpu/cpu0/cpufreq" ]; then
-		echo "CPUSPEED must be enabled to prep for locking processors at highest speed"
-		echo ""
-		echo "Adjusting CPU governors"
-		for CPU in `seq 0 ${max_cpu}`; do
-			echo -n "CPU: ${CPU}        "
-			echo -n "was `cat /sys/devices/system/cpu/cpu${CPU}/cpufreq/scaling_governor`	"
-			echo performance > /sys/devices/system/cpu/cpu${CPU}/cpufreq/scaling_governor
-			echo "now `cat /sys/devices/system/cpu/cpu${CPU}/cpufreq/scaling_governor`"
-		done
-	fi
 	cp /proc/cpuinfo ${configdir}/cpuinfo
 
 	#
