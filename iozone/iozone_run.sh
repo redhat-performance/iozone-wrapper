@@ -374,12 +374,6 @@ prep_system()
 {
 	rm -f ${testing_dir}/FAILED >& /dev/null
 
-	#
-	# Turn off power services
-	#
-	systemctl restart cpupower.service
-	systemctl stop cpupower.service
-
 	cp /proc/cpuinfo ${configdir}/cpuinfo
 
 	#
