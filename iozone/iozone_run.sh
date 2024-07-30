@@ -1671,5 +1671,5 @@ pushd ${results_dir} > /dev/null
 find -L . -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name}_$test --tuned_setting=$to_tuned_setting --version None --user $to_user
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name} --tuned_setting=$to_tuned_setting --version None --user $to_user
 popd >& /dev/null
