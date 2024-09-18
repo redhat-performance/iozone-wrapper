@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+int
 main(int argc, char **argv)
 {
 	char *buffer;
@@ -20,4 +21,5 @@ main(int argc, char **argv)
 		fwrite(buffer, 1024*1024, 1, fd);
 	}
 	fclose(fd);
+	return(0);
 }
