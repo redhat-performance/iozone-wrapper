@@ -56,6 +56,10 @@ arguments="$@"
 test_name="iozone"
 iozone_version = "v1.0"
 
+
+# Gather hardware information
+${curdir}/test_tools/gather_data ${curdir}
+
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
@@ -1651,8 +1655,8 @@ else
         echo Ran >> ${results_dir}/test_results_report
 fi
 
-
 cp ${curdir}/meta_data.yml $results_dir
+${curdir}/test_tools/move_data $curdir ${results_dir}
 if [[ $auto -eq 0 ]]; then
 	reduce_non_auto_data $iozone_output_file > $out_dir/iozone_summary
 	cp -R ${results_dir} $out_dir
