@@ -179,8 +179,7 @@ usage()
 	echo "Wrapper specific options"
 	echo "======================================================================"
 	echo "all_test: executes all the predefined tests, which currently are"
-	echo "    incache, incache_fsync, incache_mmap, incache_fsync, incache_mmap"
- 	echo "    out_of_cach dio."
+	echo "    incache, incache_fsync, incache_mmap, out_of_cache dio"
 	echo "devices_to_use <dev_a, dev_b>: comma separate list of devices to create"
 	echo "   the filesystem on. Default none."
 	echo "dio_filelimit <MB>: maximun size the file may be when doing directio."
@@ -212,7 +211,7 @@ usage()
 	echo "results_dir <dir>:  Where to place the results from the run.  The default"
 	echo "   is the <current directory>/results"
 	echo "swap: Turn off swap during testing, and reenable it when done."
-	echo "syncedincache: Run the test incache with fsync"
+	echo "syncedincache: Run the test in cache with fsync"
 	echo "test_prefix <string>:  Prefix to add to the results file."
 	echo "   Default is test_run"
 	echo "tools_git: Pointer to the test_tools git.  Default is ${tools_git}.  Top directory is always test_tools"
@@ -825,7 +824,7 @@ set_mem_vals()
 	fi
 
 	#
-	# Cap direct I/O.  Use in cache limit as a guide.  we can change this latera.
+	# Cap direct I/O.  Use in cache limit as a guide.  we can change this later.
 	#
 
 	if [ ${incache_memory} -gt ${dio_filelimit} ]; then
