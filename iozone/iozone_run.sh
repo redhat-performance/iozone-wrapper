@@ -170,9 +170,6 @@ tools_git=https://github.com/redhat-performance/test_tools-wrappers
 #
 # Config info
 #
-disk_type=""
-disk_size=""
-disk_numb=""
 
 #
 # Help message
@@ -182,8 +179,7 @@ usage()
 	echo "Wrapper specific options"
 	echo "======================================================================"
 	echo "all_test: executes all the predefined tests, which currently are"
-	echo "    incache, incache_fsync, incache_mmap, incache_fsync, incache_mmap"
- 	echo "    out_of_cach dio."
+	echo "    incache, incache_fsync, incache_mmap, out_of_cache dio"
 	echo "devices_to_use <dev_a, dev_b>: comma separate list of devices to create"
 	echo "   the filesystem on. Default none."
 	echo "dio_filelimit <MB>: maximun size the file may be when doing directio."
@@ -215,7 +211,7 @@ usage()
 	echo "results_dir <dir>:  Where to place the results from the run.  The default"
 	echo "   is the <current directory>/results"
 	echo "swap: Turn off swap during testing, and reenable it when done."
-	echo "syncedincache: Run the test incache with fsync"
+	echo "syncedincache: Run the test in cache with fsync"
 	echo "test_prefix <string>:  Prefix to add to the results file."
 	echo "   Default is test_run"
 	echo "tools_git: Pointer to the test_tools git.  Default is ${tools_git}.  Top directory is always test_tools"
@@ -596,8 +592,8 @@ do_test_actual()
 
 	for one_run in $run_types; do
 		runtest_fq_name=${runtest_name}"_"${one_run}
-		iozone_output_file=${analysis_dir}/${fstype}/iozone_${test_prefix}_${runtest_fq_name}_dt_${disk_type}_ds_${disk_size}_dn_${disk_numb}.iozone
-		iozone_analysis_file=${analysis_dir}/${fstype}/iozone_${runtest_fq_name}_dt_${disk_type}_ds_${disk_size}_dn_${disk_numb}_analysis+rawdata.log
+		iozone_output_file=${analysis_dir}/${fstype}/iozone_${test_prefix}_${runtest_fq_name}.iozone
+		iozone_analysis_file=${analysis_dir}/${fstype}/iozone_${runtest_fq_name}_analysis+rawdata.log
 		if [[ -d "${mount_location}" && ${do_iozone_umount} == 1 ]]; then
 			export iozone_args="-U ${data_mnt_pt} ${iozone_args}"
 		fi
@@ -828,7 +824,7 @@ set_mem_vals()
 	fi
 
 	#
-	# Cap direct I/O.  Use in cache limit as a guide.  we can change this latera.
+	# Cap direct I/O.  Use in cache limit as a guide.  we can change this later.
 	#
 
 	if [ ${incache_memory} -gt ${dio_filelimit} ]; then
@@ -1539,9 +1535,6 @@ while [[ $# -gt 0 ]]; do
 	esac
 	shift;
 done
-disk_type=`echo $to_configuration | cut -d'_' -f2 | cut -d'=' -f2`
-disk_size=`echo $to_configuration | cut -d'=' -f3 | cut -d'_' -f 1`
-disk_numb=`echo $to_configuration | cut -d'=' -f4 | cut -d'_' -f 1`
 
 if [ `id -u` -ne 0 ]; then
 	exit_out "You need to run as root" 1
