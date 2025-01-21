@@ -1370,6 +1370,7 @@ NO_ARGUMENTS=(
 	"incache"
 	"iozone_umount"
 	"lvm_disk"
+ 	"mmapincache"
 	"outofcache"
 	"swap"
 	"syncedincache"
