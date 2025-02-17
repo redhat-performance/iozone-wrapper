@@ -1037,32 +1037,32 @@ execute_iozone()
 
 	        #Avoid mixing auto flags with throughput mode flags
         if [[ $auto == 1 ]]; then
-                if [ ${do_incache} -eq 1 ]; then
+                if [[ ${do_incache} -eq 1 ]]; then
                         test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
                         do_test "In_Cache" "incache" ${test_specific_args}
                 fi
 
-                if [ ${do_incache_fsync} -eq 1 ]; then
+                if [[ ${do_incache_fsync} -eq 1 ]]; then
                         test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
                         do_test "In_Cache_+_Fsync" "incache+fsync" ${test_specific_args}
                 fi
 
-                if [ ${do_incache_mmap} -eq 1 ]; then
+                if [[ ${do_incache_mmap} -eq 1 ]]; then
                         test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
                         do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
                 fi
         else
-                if [ ${do_incache} -eq 1 ]; then
+                if [[ ${do_incache} -eq 1 ]]; then
                         test_specific_args=""   #intentionally left empty, everybody gets one
                         do_test "In_Cache" "incache" ${test_specific_args}
                 fi
 
-                if [ ${do_incache_fsync} -eq 1 ]; then
+                if [[ ${do_incache_fsync} -eq 1 ]]; then
                         test_specific_args=" -e"
                         do_test "In_Cache_+_Fsync" "incache+fsync" ${test_specific_args}
                 fi
 
-                if [ ${do_incache_mmap} -eq 1 ]; then
+                if [[ ${do_incache_mmap} -eq 1 ]]; then
                         test_specific_args=" -B"
                         do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
                 fi
