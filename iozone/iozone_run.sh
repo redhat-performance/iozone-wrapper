@@ -1031,15 +1031,15 @@ execute_iozone()
 {
 	make_dir ${analysis_dir}/${fstype}
 
-	if [ ${do_incache} -eq 1 ]; then
+	if [[ ${do_incache} -eq 1 ]]; then
 		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
 	fi
 
-	if [ ${do_incache_fsync} -eq 1 ]; then
+	if [[ ${do_incache_fsync} -eq 1 ]]; then
 		do_test "In Cache + Fsync" "incache+fsync" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
 	fi
 
-	if [ ${do_incache_mmap} -eq 1 ]; then
+	if [[ ${do_incache_mmap} -eq 1 ]]; then
 		do_test "In Cache w/ MMAP" "incache+mmap" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
 	fi
 }
@@ -1048,15 +1048,15 @@ execute_iozone_full()
 {
 	make_dir ${analysis_dir}/${fstype}
 
-	if [ ${do_incache} -eq 1 ]; then
+	if [[ ${do_incache} -eq 1 ]]; then
 		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
 	fi
 
-	if [ ${do_incache_fsync} -eq 1 ]; then
+	if [[ ${do_incache_fsync} -eq 1 ]]; then
 		do_test "In Cache + Fsync" "incache+fsync" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
 	fi
 
-	if [ ${do_incache_mmap} -eq 1 ]; then
+	if [[ ${do_incache_mmap} -eq 1 ]]; then
 		do_test "In Cache w/ MMAP" "incache+mmap" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
 	fi
 
