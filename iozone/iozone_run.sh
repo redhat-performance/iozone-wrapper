@@ -1036,7 +1036,7 @@ execute_iozone()
 	make_dir ${analysis_dir}/${fstype}
 
 	        #Avoid mixing auto flags with throughput mode flags
-        if [[ $auto == 1 ]]; then
+        if [[ ${auto} == 1 ]]; then
                 if [[ ${do_incache} -eq 1 ]]; then
                         test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
                         do_test "In_Cache" "incache" ${test_specific_args}
