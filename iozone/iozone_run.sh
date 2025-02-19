@@ -580,9 +580,9 @@ do_test_actual()
 	runtest_name=$2;
 
 	if [[ ${auto} == 1 ]]; then
-		iozone_args="-az -f ${data_dir}/iozone-${fstype} ${iozone_options}"$3;
+		iozone_args="-az -f ${data_dir}/iozone-${fstype} ${iozone_options} ${test_specific_args}"
 	else
-		iozone_args="${iozone_options}"
+		iozone_args="${iozone_options} ${test_specific_args}"
 	fi
 
 	run_types="default"
@@ -641,8 +641,8 @@ do_test_actual()
 			else
 				let "file_size=$max_file_size/$4"
 				echo ================================================ >> ${iozone_output_file}
-				echo ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -e -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
-				time taskset -c 0  ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -e -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
+				echo ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
+				time taskset -c 0  ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
 				status=$?
 			fi
 
@@ -1031,17 +1031,39 @@ execute_iozone()
 {
 	make_dir ${analysis_dir}/${fstype}
 
-	if [ ${do_incache} -eq 1 ]; then
-		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
-	fi
+	        #Avoid mixing auto flags with throughput mode flags
+        if [[ ${auto} == 1 ]]; then
+                if [[ ${do_incache} -eq 1 ]]; then
+                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
+                        do_test "In_Cache" "incache" ${test_specific_args}
+                fi
 
-	if [ ${do_incache_fsync} -eq 1 ]; then
-		do_test "In Cache + Fsync" "incache+fsync" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
-	fi
+                if [[ ${do_incache_fsync} -eq 1 ]]; then
+                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
+                        do_test "In_Cache_+_Fsync" "incache+fsync" ${test_specific_args}
+                fi
 
-	if [ ${do_incache_mmap} -eq 1 ]; then
-		do_test "In Cache w/ MMAP" "incache+mmap" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
-	fi
+                if [[ ${do_incache_mmap} -eq 1 ]]; then
+                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
+                        do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
+                fi
+        else
+                if [[ ${do_incache} -eq 1 ]]; then
+                        test_specific_args=""   #intentionally left empty, everybody gets one
+                        do_test "In_Cache" "incache" ${test_specific_args}
+                fi
+
+                if [[ ${do_incache_fsync} -eq 1 ]]; then
+                        test_specific_args=" -e"
+                        do_test "In_Cache_+_Fsync" "incache+fsync" ${test_specific_args}
+                fi
+
+                if [[ ${do_incache_mmap} -eq 1 ]]; then
+                        test_specific_args=" -B"
+                        do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
+                fi
+        fi
+
 }
 
 execute_iozone_full()
