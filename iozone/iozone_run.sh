@@ -1053,7 +1053,7 @@ invoke_test()
 				
 			echo ""
 
-			if [ -f "${local_watchdog_file}" ];then
+			if [[ -f "${local_watchdog_file}" ]];then
 				break;
 			fi
 		done
