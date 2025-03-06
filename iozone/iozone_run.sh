@@ -54,7 +54,7 @@ fi
 
 arguments="$@"
 test_name="iozone"
-iozone_version = "v1.0"
+iozone_version="v1.0"
 
 
 # Gather hardware information
@@ -580,7 +580,7 @@ do_test_actual()
 	runtest_name=$2;
 
 	if [[ ${auto} == 1 ]]; then
-		iozone_args="-az -f ${data_dir}/iozone-${fstype} ${iozone_options} ${test_specific_args}"
+		iozone_args="-az -f ${mount_pnt}/iozone-${fs} ${iozone_options} ${test_specific_args}"
 	else
 		iozone_args="${iozone_options} ${test_specific_args}"
 	fi
@@ -592,9 +592,9 @@ do_test_actual()
 
 	for one_run in $run_types; do
 		runtest_fq_name=${runtest_name}"_"${one_run}
-		iozone_output_file=${analysis_dir}/${fstype}/iozone_${test_prefix}_${runtest_fq_name}.iozone
-		iozone_analysis_file=${analysis_dir}/${fstype}/iozone_${runtest_fq_name}_analysis+rawdata.log
-		if [[ -d "${mount_location}" && ${do_iozone_umount} == 1 ]]; then
+		iozone_output_file=${analysis_dir}/${fs}/iozone_${test_prefix}_${runtest_fq_name}.iozone
+  		iozone_analysis_file=${analysis_dir}/${fs}/iozone_${runtest_fq_name}_analysis+rawdata.log
+  		if [[ -d "${mount_location}" && ${do_iozone_umount} == 1 ]]; then
 			export iozone_args="-U ${data_mnt_pt} ${iozone_args}"
 		fi
 
@@ -855,85 +855,6 @@ set_tunings()
 	fi
 }
 
-lun_setup()
-{
-	# Are we using secondary storage?  If so find out its lun dev name.
-	# If we have a lun we can build our own fs and test them all :)
-	# But manually run environments wont.
-	#
-	data_lun=`echo $devices_to_use | cut -d' ' -f 1`
-	if [ -d ${mount_location} -a "${data_lun}" != ""  ]; then
-		data_dir=${mount_location}
-
-		# If mount point is a label, resolve it since not all fS
-		# support label names
-		#
-		chk4label=`echo ${data_lun} | cut -c1-5 | tr '[a-z]' '[A-Z]'`
-		if [ "${chk4label}" == "LABEL" ]; then
-			data_lun=`echo ${data_lun} | sed 's:LABEL=:/dev/disk/by-label/:'`
-		fi
-
-		data_mnt_pt=${data_dir}
-
-		#
-		# Determine readahead setting for this lun
-		#
-		typeset -i read_ahead=`blockdev --getra ${data_lun}`*512/1024
-		readahead="${read_ahead} KB"
-
-		# NOW FIGURE OUT WHICH FILESYSTEMS WE CAN BUILD HERE
-		#
-		for fstype in ${filesys_to_use}
-		do
-			# TRY TO LOAD FS MODULE FIRST THEN CHECK FOR IT
-			#
-			modprobe ${fstype} >& /dev/null
-			grep -qw ${fstype} /proc/filesystems
-			if [ $? -ne 0 ]; then
-				continue;
-			fi
-
-			#
-			# Make sure we can actually build a filesystem
-			#
-			if [ -x /sbin/mkfs.${fstype} ]; then
-				#
-				# Skip ext4dev if ext4 is there
-				#
-				if [ "${fstype}" == "ext4dev" ]; then
-					echo ${readahead} | grep -qws "ext4";
-					if [ $? -eq 0 ]; then
-						continue;
-					fi
-				fi
-				iozone_actual_fs_types="${iozone_actual_fs_types} ${fstype}"
-			fi
-		done
-		#
-		# Save info on all f${mount_location}${mount_index}ilesystems after we have loaded all modules
-		#
-		cp /proc/filesystems ${configdir}/filesystems
-	else
-		data_dir=${results_dir}/data
-		make_dir $data_dir
-		data_lun=`df --portability ${data_dir} | tail -1 | awk '{ print $1 }'`
-		data_mnt_pt=`df --portability ${data_dir} | tail -1 | awk '{ print $6 }'`
-		iozone_actual_fs_types=`mount -l | grep " on ${data_mnt_pt} " | awk '{ print $5 }'`
-
-		#
-		# Determine readahead setting for this lun.  FS type must be in list
-		# ie., no nfs.
-		#
-		readahead=Unknown
-		mnt_type=`mount -l | grep -w ${data_mnt_pt} | awk '{ print $5 }'`
-		echo ${iozone_actual_fs_types} | grep -qa ${mnt_type}
-		if [ $? -eq 0 ]; then
-			typeset -i read_ahead=`blockdev --getra ${data_lun}`*512/1024
-			readahead="${read_ahead} KB"
-		fi
-	fi
-}
-
 print_system_and_run_info()
 {
 	printf "\n"
@@ -1029,7 +950,7 @@ verify_disk_cache()
 
 execute_iozone()
 {
-	make_dir ${analysis_dir}/${fstype}
+	make_dir ${analysis_dir}/${fs}
 
 	        #Avoid mixing auto flags with throughput mode flags
         if [[ ${auto} == 1 ]]; then
@@ -1128,27 +1049,13 @@ invoke_test()
 			analysis_dir=$results_dir/Run_${run_number}
 			make_dir ${analysis_dir}
 
-			#  Loop over fstype
+   			execute_iozone
+				
+			echo ""
 
-			for fstype in ${iozone_actual_fs_types}
-			do
-				# Built filesystem on lun for next filesysteM
-				#
-				fs_built_and_mounted=0;
-
-				if [ ${fs_built_and_mounted} -eq 0 ]; then
-					execute_iozone
-				else
-					printf "%-7s  not run due to mkfs/mount issue\n" ${fstype}
-					# Warn about failure
-					result_results=WARN
-				fi
-				echo ""
-
-				if [ -f "${local_watchdog_file}" ];then
-					break;
-				fi
-			done
+			if [ -f "${local_watchdog_file}" ];then
+				break;
+			fi
 		done
 		#  Compute averages
 		if (( to_times_to_run > 1 )); then
@@ -1184,8 +1091,6 @@ execute_it()
 	set_mem_vals
 
 	set_tunings
-
-	lun_setup
 
 	# Run the test itself
 
