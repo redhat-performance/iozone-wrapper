@@ -243,7 +243,7 @@ usage()
 	echo "Total file size:  Default of 10G"
 	echo "${exec_file} --incache --results_dir `pwd`/testing --test_type 0,1"
 	echo "   --mount_location /iozone/iozone0 --devices_to_use /dev/nvme3n1"
-	echo "   --filesys xfs --file_count_list 1,2,4 --auto"
+	echo "   --filesystems xfs --file_count_list 1,2,4 --auto"
 	echo ""
 	echo "Test: incache, using iozone tests 0 through 12"
 	echo "results: current directory/testing."
@@ -254,7 +254,7 @@ usage()
 	echo "Total file size:  Default of 64G"
 	echo "Disk to use: /dev/nvme3n1 and /dev/nvme2n1"
 	echo "${exec_file} --incache --results_dir `pwd`/dave --mount_location /iozone/iozone"
-	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesys xfs --file_count_list 1,2"
+	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesystems xfs --file_count_list 1,2"
 	echo "   --test_prefix io_test_all --max_file_size 64"
 	echo "   --test_type 0,1,2,3,4,5,6,7,8,9,10,11,12"
 	source test_tools/general_setup --usage
