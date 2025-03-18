@@ -968,6 +968,11 @@ execute_iozone()
                         test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
                         do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
                 fi
+
+		if [[ ${do_dio} -eq 1 ]]; then 
+                        test_specific_args="-I -n ${page_size}k -g ${dio_maxfile}m -y 64k -q 1m -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
+                        do_test "Direct_IO" "directio" ${test_specific_args}
+                fi
         else
                 if [[ ${do_incache} -eq 1 ]]; then
                         test_specific_args=""   #intentionally left empty, everybody gets one
@@ -982,6 +987,11 @@ execute_iozone()
                 if [[ ${do_incache_mmap} -eq 1 ]]; then
                         test_specific_args=" -B"
                         do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
+                fi
+
+		if [[ ${do_dio} -eq 1 ]]; then
+                        test_specific_args="-I -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
+                        do_test "Direct_IO" "directio" ${test_specific_args}
                 fi
         fi
 
