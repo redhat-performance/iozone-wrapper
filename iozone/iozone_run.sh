@@ -973,7 +973,27 @@ execute_iozone()
                         test_specific_args="-I -n ${page_size}k -g ${dio_maxfile}m -y 64k -q 1m -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
                         do_test "Direct_IO" "directio" ${test_specific_args}
                 fi
-        else
+
+                if [[ ${do_out_of_cache} -eq 1 ]]; then
+                        test_specific_args="-n ${out_of_cache_start}m -g ${out_of_cache_end}m -y 8k -q 1m"
+                        if [[ ${do_eat_mem} == 1 ]];then
+                               ${eatmem_exe} ${memory_to_take} &
+                               PID=$!
+                               sleep 180
+                               sync
+                               echo 3 > /proc/sys/vm/drop_caches
+                               sleep 10
+                               new_free_memory=`grep MemFree /proc/meminfo | awk '{ printf "%d", $2/1024 }'`
+                               echo "Free memory after calling ${eatmem_exe} ${memory_to_take} is ${new_free_memory}"
+                               echo "Requested free memory was ${eatmem_free_memory}"
+                               do_test "Out_Of_Cache" "outcache" ${test_specific_args}
+                               kill -s SIGUSR1 ${PID}
+                               wait
+                       else
+                               do_test "Out_Of_Cache" "outcache" ${test_specific_args}
+                       fi
+               fi
+else
                 if [[ ${do_incache} -eq 1 ]]; then
                         test_specific_args=""   #intentionally left empty, everybody gets one
                         do_test "In_Cache" "incache" ${test_specific_args}
