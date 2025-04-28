@@ -32,8 +32,8 @@ set -o nounset                              # Treat unset variables as an error
 OUTPUT_DIR="Average"
 
 PREFIX_DIR=${1:-./}
-AVERAGE_TABLE_BIN=$(find `pwd` -perm /u+x -name average_table.pl)
 ANALYSIS_IOZONE_BIN=$(find `pwd` -perm /u+x -name analysis-iozone.pl)
+ANALYSIS_IOZONE_BIN=$(find -L `pwd` -perm /u+x -name analysis-iozone.pl | tail -n 1)
 
 if [[ -z ${AVERAGE_TABLE_BIN} ]]
 then
