@@ -979,7 +979,7 @@ execute_iozone()
                         if [[ ${do_eat_mem} == 1 ]];then
                                ${eatmem_exe} ${memory_to_take} &
                                PID=$!
-                               sleep 180
+                               sleep 180	# This is okay for now, but we're going to want to reevaluate at some point.
                                sync
                                echo 3 > /proc/sys/vm/drop_caches
                                sleep 10
