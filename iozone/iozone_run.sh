@@ -1017,48 +1017,6 @@ else
 
 }
 
-execute_iozone_full()
-{
-	make_dir ${analysis_dir}/${fstype}
-
-	if [ ${do_incache} -eq 1 ]; then
-		do_test "In Cache" "incache" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
-	fi
-
-	if [ ${do_incache_fsync} -eq 1 ]; then
-		do_test "In Cache + Fsync" "incache+fsync" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
-	fi
-
-	if [ ${do_incache_mmap} -eq 1 ]; then
-		do_test "In Cache w/ MMAP" "incache+mmap" "-n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
-	fi
-
-	#
-	# Fix this later.
-	#
-	if [ ${do_dio} -eq 1 ]; then
-		do_test "Direct I/O" "directio" "-I -n ${page_size}k -g ${dio_maxfile}m -y 64k -q 1m -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
-	fi
-
-	if [ ${do_out_of_cache} -eq 1 ]; then
-		if [[ ${do_eat_mem} == 1 ]];then
-			${eatmem_exe} ${memory_to_take} &
-			PID=$!
-			sleep 180
-			sync
-			echo 3 > /proc/sys/vm/drop_caches
-			sleep 10
-			new_free_memory=`grep MemFree /proc/meminfo | awk '{ printf "%d", $2/1024 }'`
-			echo "Free memory after calling ${eatmem_exe} ${memory_to_take} is ${new_free_memory}"
-			echo "Requested free memory was ${eatmem_free_memory}"
-			do_test "Out Of Cache" "outcache" "-n ${out_of_cache_start}m -g ${out_of_cache_end}m -y 8k -q 1m"
-			kill -s SIGUSR1 ${PID}
-			wait
-		else
-			do_test "Out Of Cache" "outcache" "-n ${out_of_cache_start}m -g ${out_of_cache_end}m -y 8k -q 1m"
-		fi
-	fi
-}
 
 invoke_test()
 {
