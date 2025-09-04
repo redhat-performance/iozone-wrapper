@@ -1128,6 +1128,37 @@ execute_it()
 	fi
 }
 
+reduce_auto_data()
+{
+        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
+
+        # Which directory to use depends on whether is's a single or multipass run
+        if [[ $to_times_to_run -gt 1 ]]; then
+                resdir="Average"
+        else
+                resdir="Run_1"
+        fi
+
+        # Add the column headers
+        echo "fs.mode:all_ios:initwrite:rewrite:read:reread:rndread:rndwrite:backread:recrewrite:strideread:fwrite:frewrite:fread:freread" >> /tmp/results.csv
+
+        pushd ${results_dir}/${resdir} >& /dev/null
+        for resfs in $filesystems
+        do
+                # Left to right:
+                # Find lines containing ALL (there are more than we need)
+                # Get rid of the ones we don't need
+                # Get rid of "iozone_"
+                # Get rid of the part of the filename we don't need
+                # "ALL" has served its purpose, don't need it in the CSV
+                # Turn the tabs into colons
+                # Drop the trailing colon
+                # Turn the directory slash into a dot to make fs.mode
+                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */:/g;s/.$//;s/\//./" >> /tmp/results.csv
+        done
+        popd >& /dev/null
+}
+
 reduce_non_auto_data()
 {
 	header=0
@@ -1570,8 +1601,8 @@ if [[ $auto -eq 0 ]]; then
 	reduce_non_auto_data $iozone_output_file > $out_dir/iozone_summary
 	cp -R ${results_dir} $out_dir
 else
+	reduce_auto_data
 	cp -R ${results_dir} ${out_dir}
-	
 fi
 
 # Archive results into single tarball
