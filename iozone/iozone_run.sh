@@ -1131,7 +1131,8 @@ execute_it()
 reduce_auto_data()
 {
         $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-
+		echo "# IOzone_runmode: auto" >> /tmp/results.csv
+  
         # Which directory to use depends on whether is's a single or multipass run
         if [[ $to_times_to_run -gt 1 ]]; then
                 resdir="Average"
@@ -1176,7 +1177,8 @@ reduce_non_auto_data()
 	command=""
 
   $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-
+	echo "# IOzone_runmode: throughput" >> /tmp/results.csv
+ 
 	while IFS= read -r line
 	do
 		if [[ $line == *"======" ]]; then
