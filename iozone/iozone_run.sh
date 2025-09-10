@@ -305,8 +305,6 @@ fi
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_puser: User running pbench
 # to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
@@ -1489,17 +1487,6 @@ if [ `id -u` -ne 0 ]; then
 	exit_out "You need to run as root" 1
 fi
 
-if [ $to_pbench -eq 1 ]; then
-        source ~/.bashrc
-
-	for ((run_number=1; run_number <= to_times_to_run ; run_number++))
-	do
-		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test $test_name --spacing 11 --pbench_stats $to_pstats
-		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" ${arguments} --test iozone --spacing 11 --pbench_stats $to_pstats
-	done
-	exit 0
-fi
-
 dir_to=""
 if [[ $to_home_root != "" ]]; then
 	if [[ $to_user != "" ]]; then
@@ -1613,11 +1600,9 @@ pushd /tmp >& /dev/null
 
 archive_file="iozone-results.tar.gz"
 make_dir $results_dir
-rm -f results_pbench.tar
 echo mv /tmp/results.csv ${results_dir} 
 mv /tmp/results.csv ${results_dir} 
 pushd ${results_dir} > /dev/null
-find -L . -type f | tar --transform 's/.*\///g' -cf /tmp/results_pbench.tar --files-from=/dev/stdin
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
 ${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name} --tuned_setting=$to_tuned_setting --version None --user $to_user
