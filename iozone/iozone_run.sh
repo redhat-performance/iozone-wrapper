@@ -656,6 +656,11 @@ do_test_actual()
 			fi
 
 			if [ ${status} -eq 1 ]; then
+				# If we're using PCP, shut down and clean up before bailing out
+				if [[ $to_use_pcp -eq 1 ]]; then
+					stop_pcp
+					shutdown_pcp
+	 			fi
 				exit_out "Execution of iozone failed" 1
 			fi
 			if [[ ${auto} == 1 ]]; then
@@ -1027,6 +1032,12 @@ invoke_test()
 		if [[ $auto -eq 1 ]]; then
 			print_header_info
 		fi
+        
+		# If we're using PCP start logging
+        if [[ $to_use_pcp -eq 1 ]]; then
+            echo "Start PCP"
+            start_pcp ${pcpdir}/ ${test_name} $pcp_cfg
+        fi
 
 		# sequential runs
 		for ((run_number=1; run_number <= to_times_to_run ; run_number++))
@@ -1034,14 +1045,33 @@ invoke_test()
 			analysis_dir=$results_dir/Run_${run_number}
 			make_dir ${analysis_dir}
 
+			#If we're using PCP, snap a chalk line at the start of the iteration and log the run number
+			if [[ $to_use_pcp -eq 1 ]]; then
+        		start_pcp_subset
+		  		result2pcp iteration ${run_number}
+			fi
+
    			execute_iozone
-				
+
+			# If we're using PCP, snap the chalk line at the end of the iteration
+
+			if [[ $to_use_pcp -eq 1 ]]; then
+	        	stop_pcp_subset
+			fi
+ 
 			echo ""
 
 			if [[ -f "${local_watchdog_file}" ]];then
 				break;
 			fi
 		done
+
+        # If we're using PCP, stop logging
+        if [[ $to_use_pcp -eq 1 ]]; then
+            echo "Stop PCP"
+        	stop_pcp
+        fi
+
 		#  Compute averages
 		if (( to_times_to_run > 1 )); then
 			cd `dirname ${results_dir}`
@@ -1502,6 +1532,12 @@ if [[ $results_dir == "" ]]; then
 	fi
 fi
 
+# Make a PCP results dir if necessary
+if [[ $to_use_pcp -eq 1 ]]; then
+       pcpdir=${results_dir}/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
+       mkdir -p ${pcpdir}
+fi
+
 pushd $run_dir >& /dev/null
 gcc -Wall -Os -o create_file create_file.c
 if [ ! -x "$run_dir/create_file" ]; then
@@ -1539,6 +1575,13 @@ touch $buildrunlog
 
 if [[ $mount_location = "" ]]; then
 	exit_out "Need to designate a mount point" 1
+fi
+
+# Get PCP setup if we're using it
+if [[ $to_use_pcp -eq 1 ]]; then
+        source $TOOLS_BIN/pcp/pcp_commands.inc
+        setup_pcp
+        pcp_cfg=$TOOLS_BIN/pcp/default.cfg
 fi
 
 #
@@ -1606,3 +1649,8 @@ tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
 ${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name} --tuned_setting=$to_tuned_setting --version None --user $to_user
 popd >& /dev/null
+
+# Shutdown PCP and clean up after ourselves
+if [[ $to_use_pcp -eq 1 ]]; then
+        shutdown_pcp
+fi
