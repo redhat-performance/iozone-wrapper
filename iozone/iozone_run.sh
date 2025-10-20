@@ -313,6 +313,9 @@ fi
 
 source test_tools/general_setup "$@"
 
+# Install needed packages based on what's listed in the wrapper's json file
+${TOOLS_BIN}/package_tool --wrapper_config ${run_dir}/iozone-wrapper.json
+
 #
 # Get processor speed info.   Report if there are multiple speeds
 #
