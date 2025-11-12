@@ -1217,6 +1217,14 @@ reduce_non_auto_data()
 		for testmode in incache incache_fsync incache_mmap directio outofcache
 		do
 			if compgen -G *${testmode}_*.iozone > /dev/null; then
+				# Left to right:
+				# Pull lines with double quotes (they're the spreadsheet-friendly output)
+				# Remove the top three lines, we don't need them
+				# Turn two-word subtest names into one word
+				# We don't need the double quotes anymore, get rid of them
+				# Turn groups of spaces in between fields into colons
+				# Lose the trailing colon
+				# Put filesystem and testmode at the front
 				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */:/g;s/.$//;s/./${resfs}:${testmode}:/" >> /tmp/results.csv
 			fi
 		done
