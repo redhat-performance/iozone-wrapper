@@ -651,7 +651,7 @@ do_test_actual()
 			else
 				let "file_size=$max_file_size/$4"
 				echo ================================================ >> ${iozone_output_file}
-				echo ${iozone_exe} ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
+				echo ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
 				time taskset -c 0 ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
 				status=$?
 			fi
