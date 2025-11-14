@@ -1208,7 +1208,7 @@ reduce_non_auto_data()
 	# The averaging script wasn't meant for throughput mode
 	resdir="Run_1"
 	# Add the column headers
-	echo filesys:op:${file_count_list} | sed 's/ /proc:/g; s/$/proc/' >> /tmp/results.csv
+	echo filesys:mode:op:${file_count_list} | sed 's/ /proc:/g; s/$/proc/' >> /tmp/results.csv
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
