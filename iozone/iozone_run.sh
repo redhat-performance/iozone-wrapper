@@ -547,27 +547,34 @@ do_test()
 		do
 			file_list=""
 			total_files=0
+			procs_to_run=""
+			tests_to_run=""
 			for mount_pnt in $mount_list;
 			do
-				for count in `seq 1 $numb_files`;
-				do
-					file_list=${file_list}${separ}/${mount_pnt}/file_${count}
-					rm /${mount_pnt}/file_${count}
-					${run_dir}/create_file /${mount_pnt}/file_${count} $max_file_size
-					separ=" "
-					let "total_files=$total_files+1"
-				done
-			done
-			for test_to_run in $test_type;
-			do
-				do_test_actual "$1" "$2" "$3" $total_files "${file_list}" "$test_to_run"
-				echo File frag >> $iozone_output_file
-				filefrag $file_list >> $iozone_output_file
-				echo End of file frag >> $iozone_output_file
-				echo ================================================ >> ${iozone_output_file}
-			done
-			rm -rf $file_list
-		done
+                                for count in `seq 1 $numb_files`;
+                                do
+                                        file_list=${file_list}${separ}/${mount_pnt}/file_${count}
+                                        rm /${mount_pnt}/file_${count}
+                                        ${run_dir}/create_file /${mount_pnt}/file_${count} $max_file_size
+                                        separ=" "
+                                        let "total_files=$total_files+1"
+                                done
+                        done
+                done
+                for proc_selected in ${file_count_list};
+                do
+                        procs_to_run="${procs_to_run} -t ${proc_selected}"
+                done
+                for test_selected in ${test_type};
+                do
+                        tests_to_run="${tests_to_run} -i ${test_selected}"
+                done
+                do_test_actual "$1" "$2" "$3" "${procs_to_run}" "${file_list}" "${tests_to_run}"
+                echo File frag >> $iozone_output_file
+                filefrag $file_list >> $iozone_output_file
+                echo End of file frag >> $iozone_output_file
+                echo ================================================ >> ${iozone_output_file}
+                rm -rf $file_list
 	fi
 }
 do_test_actual()
@@ -642,10 +649,10 @@ do_test_actual()
 				time taskset -c 0 ${iozone_exe} ${iozone_args} /iozone/iozone/iozone1 >& ${iozone_output_file}
 				status=$?
 			else
-				let "file_size=$max_file_size/$4"
+				let "file_size=$max_file_size"
 				echo ================================================ >> ${iozone_output_file}
-				echo ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
-				time taskset -c 0  ${iozone_exe} -t $4 -i ${6} -+n -r ${page_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
+				echo ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
+				time taskset -c 0 ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
 				status=$?
 			fi
 
@@ -1195,88 +1202,36 @@ reduce_auto_data()
 
 reduce_non_auto_data()
 {
-	header=0
-	first_found=0
-	cmd_line_display=0
-	total_threads=0
-	average_tp=""
-	record_size=""
-	max_tp=0
-	min_tp=0
-	file_size=""
-	test_type=""
-	total_tp==""
-	procs=""
-	command=""
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
+	$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "IOzone mode: Throughput" --results_file /tmp/results.csv
 
-  $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-	echo "# IOzone_runmode: throughput" >> /tmp/results.csv
- 
-	while IFS= read -r line
-	do
-		if [[ $line == *"======" ]]; then
-			if [[ $first_found -eq 0 ]]; then
-				cmd_line_display=1
-				first_found=1
-				continue
+	# The averaging script wasn't meant for throughput mode
+	resdir="Run_1"
+	# Add the column headers
+	echo filesys:mode:op:${file_count_list} | sed 's/ /proc:/g; s/$/proc/' >> /tmp/results.csv
+
+        pushd ${results_dir}/${resdir} >& /dev/null
+        for resfs in $filesystems
+        do
+		cd ${resfs}
+		for testmode in incache incache_fsync incache_mmap directio outofcache
+		do
+			if compgen -G *${testmode}_*.iozone > /dev/null; then
+				# Left to right:
+				# Pull lines with double quotes (they're the spreadsheet-friendly output)
+				# Remove the top three lines, we don't need them
+				# Turn two-word subtest names into one word
+				# We don't need the double quotes anymore, get rid of them
+				# Turn groups of spaces in between fields into colons
+				# Lose the trailing colon
+				# Put filesystem and testmode at the front
+				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */:/g;s/.$//;s/./${resfs}:${testmode}:/" >> /tmp/results.csv
 			fi
-			continue
-		fi
-		if [[ $cmd_line_display -eq 1 ]]; then
-			command=$line
-			cmd_line_display=0
-			continue
-		fi
-		if [[ $line == *"Children see throughput for"* ]]; then
-			work_with=`echo $line | sed "s/  / /g"`
-			total_tp=`echo $work_with | cut -d'=' -f 2`
-			procs=`echo $work_with | cut -d' ' -f 5`
-			if [[ $work_with == *"initial"* ]]; then
-				test_type=`echo $work_with | cut -d' ' -f 6,7`
-			else
-				test_type=`echo $work_with | cut -d' ' -f 6`
-			fi
-			continue
-		fi
-		if [[ $line == *"Avg throughput per process"* ]]; then
-			average_tp=`echo $line | cut -d'=' -f 2`
-			continue
-		fi
-		if [[ $line == *"Min throughput per process"* ]]; then
-			min_tp=`echo $line | cut -d'=' -f 2`
-			continue
-		fi
-		if [[ $line == *"Max throughput per process"* ]]; then
-			max_tp=`echo $line | cut -d'=' -f 2`
-			continue
-		fi
-		if [[ $line == *"Record Size"* ]]; then
-			record_size=`echo $line | cut -d'=' -f 2`
-			continue
-		fi
-		if [[ $line == *"File size set to"* ]]; then
-			file_size=`echo $line | cut -d' ' -f 5,6`
-			continue
-		fi
-		if [[ $line == *"End of file frag"* ]]; then
-			echo =============================
-			echo $command
-			echo test_type: $test_type
-			echo processes: $procs
-			echo file_size: $file_size
-			echo record_size: $record_size
-			echo total throughput rate: $total_tp
-			echo Max tp per proc: $max_tp
-			echo Min tp per proc: $min_tp
-			echo Average tp per proc: $average_tp
-			first_found=0
-			if [ $header -eq 0 ]; then
-				header=1 
-				echo processes:test_type:file_sze:record_size:Total_througput >> /tmp/results.csv
-			fi
-			echo ${procs}:${test_type}:${file_size}:${record_size}:${total_tp} >> /tmp/results.csv
-		fi
-	done  < "${1}"
+		done
+		cd ..
+        done
+        popd >& /dev/null
+
 }
 
 obtain_disks()
