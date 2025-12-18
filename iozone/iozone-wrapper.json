@@ -9,6 +9,7 @@
       "perl-Math-BigInt",
       "perl-Math-BigRat",
       "unzip",
+      "wget",
       "zip",
       "pcp-zeroconf",
       "pcp-pmda-openmetrics",
