@@ -10,10 +10,7 @@
       "perl-Math-BigRat",
       "unzip",
       "wget",
-      "zip",
-      "pcp-zeroconf",
-      "pcp-pmda-openmetrics",
-      "pcp-pmda-denki"
+      "zip"
     ],
     "ubuntu": [
       "bc",
@@ -23,8 +20,7 @@
       "linux-tools-generic",
       "libmath-bigint-perl",
       "unzip",
-      "zip",
-      "pcp-zeroconf"
+      "zip"
     ]
   }
 }
