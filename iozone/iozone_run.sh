@@ -1181,7 +1181,7 @@ reduce_auto_data()
         fi
 
         # Add the column headers
-        echo "fs.mode:all_ios:initwrite:rewrite:read:reread:rndread:rndwrite:backread:recrewrite:strideread:fwrite:frewrite:fread:freread" >> /tmp/results.csv
+        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
@@ -1192,10 +1192,10 @@ reduce_auto_data()
                 # Get rid of "iozone_"
                 # Get rid of the part of the filename we don't need
                 # "ALL" has served its purpose, don't need it in the CSV
-                # Turn the tabs into colons
-                # Drop the trailing colon
-                # Turn the directory slash into a dot to make fs.mode
-                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */:/g;s/.$//;s/\//./" >> /tmp/results.csv
+                # Turn the tabs into comma
+                # Drop the trailing comma
+                # Turn the directory slash into a comma to make fs,mode
+                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" >> /tmp/results_iozone.csv
         done
         popd >& /dev/null
 }
@@ -1208,7 +1208,8 @@ reduce_non_auto_data()
 	# The averaging script wasn't meant for throughput mode
 	resdir="Run_1"
 	# Add the column headers
-	echo filesys:mode:op:${file_count_list} | sed 's/ /proc:/g; s/$/proc/' >> /tmp/results.csv
+	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "filesys,mode,op,${procheaders}"
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
@@ -1222,10 +1223,10 @@ reduce_non_auto_data()
 				# Remove the top three lines, we don't need them
 				# Turn two-word subtest names into one word
 				# We don't need the double quotes anymore, get rid of them
-				# Turn groups of spaces in between fields into colons
-				# Lose the trailing colon
+				# Turn groups of spaces in between fields into commas
+				# Lose the trailing comma
 				# Put filesystem and testmode at the front
-				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */:/g;s/.$//;s/./${resfs}:${testmode}:/" >> /tmp/results.csv
+				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */,/g;s/.$//;s/./${resfs},${testmode},/" >> /tmp/results_iozone.csv
 			fi
 		done
 		cd ..
@@ -1603,8 +1604,8 @@ pushd /tmp >& /dev/null
 
 archive_file="iozone-results.tar.gz"
 make_dir $results_dir
-echo mv /tmp/results.csv ${results_dir} 
-mv /tmp/results.csv ${results_dir} 
+echo mv /tmp/results_iozone.csv ${results_dir} 
+mv /tmp/results_iozone.csv ${results_dir} 
 pushd ${results_dir} > /dev/null
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
