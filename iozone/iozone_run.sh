@@ -1195,7 +1195,12 @@ reduce_auto_data()
                 # Turn the tabs into comma
                 # Drop the trailing comma
                 # Turn the directory slash into a comma to make fs,mode
-                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" >> /tmp/results_iozone.csv
+                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" > /tmp/fs_results_iozone.csv
+		# Pad the lines for mmap and directio so the start/end times are in the right column
+		sed -i '/directio\|mmap/s/$/,NaN,NaN,NaN,NaN/' /tmp/fs_results_iozone.csv
+		# Tack the fs results onto the end of the main results file and clean up after ourselves
+		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+		rm /tmp/fs_results_iozone.csv
         done
         popd >& /dev/null
 }
