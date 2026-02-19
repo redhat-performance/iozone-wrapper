@@ -1198,6 +1198,10 @@ reduce_auto_data()
                 grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" > /tmp/fs_results_iozone.csv
 		# Pad the lines for mmap and directio so the start/end times are in the right column
 		sed -i '/directio\|mmap/s/$/,NaN,NaN,NaN,NaN/' /tmp/fs_results_iozone.csv
+		# Append the start/end times for the filesystem
+		started_time=`cat /tmp/iozone_${resfs}_start_time`
+		ended_time=`cat /tmp/iozone_${resfs}_end_time`
+		sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
 		# Tack the fs results onto the end of the main results file and clean up after ourselves
 		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
 		rm /tmp/fs_results_iozone.csv
@@ -1215,7 +1219,7 @@ reduce_non_auto_data()
 	# Add the column headers
 	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
 	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "filesys,mode,op,${procheaders}"
-
+:
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
@@ -1231,7 +1235,14 @@ reduce_non_auto_data()
 				# Turn groups of spaces in between fields into commas
 				# Lose the trailing comma
 				# Put filesystem and testmode at the front
-				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */,/g;s/.$//;s/./${resfs},${testmode},/" >> /tmp/results_iozone.csv
+				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */,/g;s/.$//;s/./${resfs},${testmode},/" > /tmp/fs_results_iozone.csv
+				# Append the start/end times for the filesystem
+                		started_time=`cat /tmp/iozone_${resfs}_start_time`
+                		ended_time=`cat /tmp/iozone_${resfs}_end_time`
+                		sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
+                		# Tack the fs results onto the end of the main results file and clean up after ourselves
+                		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+                		rm /tmp/fs_results_iozone.csv
 			fi
 		done
 		cd ..
@@ -1577,7 +1588,11 @@ for fs in $filesystems; do
 		done
 	fi
 	filesys_to_use=$fs
+	# Mark fs start time
+	echo $(retrieve_time_stamp) > /tmp/iozone_${fs}_start_time
 	execute_it $fs
+	# Mark fs end time
+	echo $(retrieve_time_stamp) > /tmp/iozone_${fs}_end_time
 	if [ $mount_index  -ne 0 ]; then
 		if [ $lvm_disk -eq 1 ]; then
 			$TOOLS_BIN/lvm_delete --lvm_vol iozone --lvm_grp iozone --mount_pnt ${mount_list}
@@ -1586,6 +1601,7 @@ for fs in $filesystems; do
 		fi
 	fi
 done
+
 
 if [[ $run_results != "PASS"  ]]; then
         echo Failed >> ${results_dir}/test_results_report
