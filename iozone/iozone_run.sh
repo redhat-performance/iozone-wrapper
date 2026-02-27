@@ -1079,11 +1079,6 @@ invoke_test()
 			fi
 		done
 
-        # If we're using PCP, stop logging
-        if [[ $to_use_pcp -eq 1 ]]; then
-            echo "Stop PCP"
-        	stop_pcp
-        fi
 
 		#  Compute averages
 		if (( to_times_to_run > 1 )); then
@@ -1168,10 +1163,95 @@ execute_it()
 	fi
 }
 
+auto_results_to_pcp()
+{
+	echo "auto results to pcp"
+        resfilelength=`wc -l ${1} | awk '{print $1}'`
+        headerline=`grep -n all_ios ${1} | cut -f 1 -d :`       # The actual results start one line after this and run to the end of the file
+        numlines=`expr ${resfilelength} - ${headerline}`
+
+        for resline in `tail -n ${numlines} ${1}`; do
+                # Build the argument line for results2pcp_multiple
+
+		# Filesys needs to be a number because openmetrics doesn't like strings
+                # We also need to account for support of future filesystems without
+                #  risking breaking database schemas et al
+                filesys=`echo ${resline} | cut -f 1 -d ,`
+                case "${filesys}" in
+                        xfs)
+                                filesysnum=1
+                                ;;
+                        ext3)
+                                filesysnum=3
+                                ;;
+                        ext4)
+                                filesysnum=4
+                                ;;
+                        *)
+                                # Someone's doing something unexpected
+                                filesysnum=0
+                                ;;
+                esac
+
+		# Convert the "testmode" knob to five metrics
+		pcp_incache=0
+		pcp_incache_fsync=0
+		pcp_incache_mmap=0
+		pcp_directio=0
+		pcp_outofcache=0
+                testmode=`echo ${resline} | cut -f 2 -d ,`
+		case "${testmode}" in
+		incache)
+			pcp_incache=1
+			;;
+		incache+fsync)
+			pcp_incache_fsync=1
+			;;
+		incache+mmap)
+			pcp_incache_mmap=1
+			;;
+		directio)
+			pcp_directio=1
+			;;
+		outofcache)
+			pcp_outofcache=1
+			;;
+		*)
+			# Something's broken
+		esac
+
+		pcp_all_ios=`echo ${resline} | cut -d , -f 3`
+		pcp_initwrite=`echo ${resline} | cut -d , -f 4`
+		pcp_rewrite=`echo ${resline} | cut -d , -f 5`
+		pcp_read=`echo ${resline} | cut -d , -f 6`
+		pcp_reread=`echo ${resline} | cut -d , -f 7`
+		pcp_rndread=`echo ${resline} | cut -d , -f 8`
+		pcp_rndwrite=`echo ${resline} | cut -d , -f 9`
+		pcp_backread=`echo ${resline} | cut -d , -f 10`
+		pcp_recrewrite=`echo ${resline} | cut -d , -f 11`
+		pcp_strideread=`echo ${resline} | cut -d , -f 12`
+
+                # directio and incache+mmap don't do the last four so populate with NaN
+                #   to match the results file and make pcp happy
+                if [[ "${testmode}" == "directio" || "${testmode}" == "incache+mmap" ]]; then
+			pcp_fwrite=NaN
+			pcp_frewrite=NaN
+			pcp_fread=NaN
+			pcp_freread=NaN
+                else
+			pcp_fwrite=`echo ${resline} | cut -d , -f 13`
+			pcp_frewrite=`echo ${resline} | cut -d , -f 14`
+			pcp_fread=`echo ${resline} | cut -d , -f 15`
+			pcp_freread=`echo ${resline} | cut -d , -f 16`
+                fi
+		results2pcp_multiple "automode:1,filesys:${filesysnum},incache:${pcp_incache},incache_fsync:${pcp_incache_fsync},incache_mmap:${pcp_incache_mmap},directio:${pcp_directio},outofcache:${pcp_outofcache},all_ios:${pcp_all_ios},initwrite:${pcp_initwrite},rewrite:${pcp_rewrite},read:${pcp_read},reread:${pcp_reread},rndread:${pcp_rndread},rndwrite:${pcp_rndwrite},backread:${pcp_backread},recrewrite:${pcp_recrewrite},strideread:${pcp_strideread},fwrite:${pcp_fwrite},frewrite:${pcp_frewrite},fread:${pcp_fread},freread:${pcp_freread}"
+	sleep 3		# Make sure the poller picks up the new openmetrics before they change/shut down
+        done
+	
+}
+
 reduce_auto_data()
 {
-        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-		echo "# IOzone_runmode: auto" >> /tmp/results.csv
   
         # Which directory to use depends on whether is's a single or multipass run
         if [[ $to_times_to_run -gt 1 ]]; then
@@ -1180,8 +1260,9 @@ reduce_auto_data()
                 resdir="Run_1"
         fi
 
-        # Add the column headers
+        # Add the front matter and column headers
         $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
+	echo "# IOzone_runmode: auto" >> /tmp/results_iozone.csv
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
@@ -1205,13 +1286,18 @@ reduce_auto_data()
 		# Tack the fs results onto the end of the main results file and clean up after ourselves
 		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
 		rm /tmp/fs_results_iozone.csv
+
+		# Get the results into the PCP archive
+		if [[ $to_use_pcp -eq 1 ]]; then
+			auto_results_to_pcp /tmp/results_iozone.csv
+		fi
         done
         popd >& /dev/null
 }
 
 reduce_non_auto_data()
 {
-	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
 	$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "IOzone mode: Throughput" --results_file /tmp/results.csv
 
 	# The averaging script wasn't meant for throughput mode
@@ -1559,7 +1645,7 @@ fi
 if [[ $to_use_pcp -eq 1 ]]; then
         source $TOOLS_BIN/pcp/pcp_commands.inc
         setup_pcp
-        pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+        pcp_cfg=${run_dir}/iozone_pmlogger.cfg
 fi
 
 #
@@ -1617,6 +1703,13 @@ if [[ $auto -eq 0 ]]; then
 else
 	reduce_auto_data
 	cp -R ${results_dir} ${out_dir}
+fi
+
+# If we're using PCP, stop logging
+# This has to come after reduce_*_data in order to get the final results into the archive
+if [[ $to_use_pcp -eq 1 ]]; then
+	echo "Stop PCP"
+      	stop_pcp
 fi
 
 # Archive results into single tarball
