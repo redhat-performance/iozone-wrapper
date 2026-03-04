@@ -19,9 +19,15 @@ reread NaN
 rndread NaN
 rndwrite NaN
 backread NaN
+mixedworkload NaN
 recrewrite NaN 
 strideread NaN
 fwrite NaN
 frewrite NaN
 fread NaN
 freread NaN
+pwrite NaN
+pread NaN
+tput1proc NaN
+tput2proc NaN
+tput4proc NaN
