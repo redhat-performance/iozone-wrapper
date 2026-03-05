@@ -114,6 +114,7 @@ mount_list=""
 iozone_output_file=""
 filesys_to_use=""
 resultdir=""
+results_version="1.0"
 
 				### NOTE iozone ROUNDS TO NEXT LOWEST POWER OF 2. ###
 outcache_multiplier=4		# Multiplier for max out of cache file size compared to incache size.
@@ -1310,21 +1311,7 @@ auto_results_to_pcp()
                 # We also need to account for support of future filesystems without
                 #  risking breaking database schemas et al
                 filesys=`echo ${resline} | cut -f 1 -d ,`
-                case "${filesys}" in
-                        xfs)
-                                filesysnum=1
-                                ;;
-                        ext3)
-                                filesysnum=3
-                                ;;
-                        ext4)
-                                filesysnum=4
-                                ;;
-                        *)
-                                # Someone's doing something unexpected
-                                filesysnum=0
-                                ;;
-                esac
+		filesysnum=$(results_filesys2num ${filesys})
 
 		# Convert the "testmode" knob to five metrics
 		pcp_incache=0
@@ -1395,7 +1382,6 @@ reduce_auto_data()
 
         # Add the front matter and column headers
         $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
-	echo "# IOzone_runmode: auto" >> /tmp/results_iozone.csv
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
