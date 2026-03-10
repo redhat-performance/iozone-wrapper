@@ -1385,30 +1385,30 @@ reduce_auto_data()
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
-                # Left to right:
-                # Find lines containing ALL (there are more than we need)
-                # Get rid of the ones we don't need
-                # Get rid of "iozone_"
-                # Get rid of the part of the filename we don't need
-                # "ALL" has served its purpose, don't need it in the CSV
-                # Turn the tabs into comma
-                # Drop the trailing comma
-                # Turn the directory slash into a comma to make fs,mode
-                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" > /tmp/fs_results_iozone.csv
-		# Pad the lines for mmap and directio so the start/end times are in the right column
-		sed -i '/directio\|mmap/s/$/,NaN,NaN,NaN,NaN/' /tmp/fs_results_iozone.csv
-		# Append the start/end times for the filesystem
-		started_time=`cat /tmp/iozone_${resfs}_start_time`
-		ended_time=`cat /tmp/iozone_${resfs}_end_time`
-		sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
-		# Tack the fs results onto the end of the main results file and clean up after ourselves
-		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
-		rm /tmp/fs_results_iozone.csv
+            # Left to right:
+            # Find lines containing ALL (there are more than we need)
+            # Get rid of the ones we don't need
+            # Get rid of "iozone_"
+            # Get rid of the part of the filename we don't need
+            # "ALL" has served its purpose, don't need it in the CSV
+            # Turn the tabs into comma
+            # Drop the trailing comma
+            # Turn the directory slash into a comma to make fs,mode
+            grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" > /tmp/fs_results_iozone.csv
+			# Pad the lines for mmap and directio so the start/end times are in the right column
+			sed -i '/directio\|mmap/s/$/,NaN,NaN,NaN,NaN/' /tmp/fs_results_iozone.csv
+			# Append the start/end times for the filesystem
+			started_time=`cat /tmp/iozone_${resfs}_start_time`
+			ended_time=`cat /tmp/iozone_${resfs}_end_time`
+			sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
+			# Tack the fs results onto the end of the main results file and clean up after ourselves
+			cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+			rm /tmp/fs_results_iozone.csv
 
-		# Get the results into the PCP archive
-		if [[ $to_use_pcp -eq 1 ]]; then
-			auto_results_to_pcp /tmp/results_iozone.csv
-		fi
+			# Get the results into the PCP archive
+			if [[ $to_use_pcp -eq 1 ]]; then
+				auto_results_to_pcp /tmp/results_iozone.csv
+			fi
         done
         popd >& /dev/null
 }
@@ -1421,9 +1421,9 @@ reduce_non_auto_data()
 	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
 	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name  --field_header "filesys,mode,op,${procheaders}"
 :
-        pushd ${results_dir}/${resdir} >& /dev/null
-        for resfs in $filesystems
-        do
+    pushd ${results_dir}/${resdir} >& /dev/null
+    for resfs in $filesystems
+    do
 		cd ${resfs}
 		for testmode in incache incache_fsync incache_mmap directio outofcache
 		do
@@ -1438,12 +1438,12 @@ reduce_non_auto_data()
 				# Put filesystem and testmode at the front
 				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/-//;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */,/g;s/.$//;s/./${resfs},${testmode},/" > /tmp/fs_results_iozone.csv
 				# Append the start/end times for the filesystem
-                		started_time=`cat /tmp/iozone_${resfs}_start_time`
-                		ended_time=`cat /tmp/iozone_${resfs}_end_time`
-                		sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
-                		# Tack the fs results onto the end of the main results file and clean up after ourselves
-                		cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
-                		rm /tmp/fs_results_iozone.csv
+                started_time=`cat /tmp/iozone_${resfs}_start_time`
+                ended_time=`cat /tmp/iozone_${resfs}_end_time`
+                sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
+                # Tack the fs results onto the end of the main results file and clean up after ourselves
+                cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+                rm /tmp/fs_results_iozone.csv
 			fi
 		done
 		cd ..
@@ -1451,9 +1451,8 @@ reduce_non_auto_data()
                 if [[ $to_use_pcp -eq 1 ]]; then
 			tput_results_to_pcp /tmp/results_iozone.csv
 		fi
-        done
-        popd >& /dev/null
-
+    done
+    popd >& /dev/null
 }
 
 obtain_disks()
