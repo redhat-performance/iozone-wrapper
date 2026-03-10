@@ -1168,18 +1168,18 @@ results_filesys2num()
 {
 	case ${1} in
 		xfs)
-                        filesysnum=1
-                        ;;
-                ext3)
-                        filesysnum=3
-                        ;;
-                ext4)
-                        filesysnum=4
-                        ;;
-                *)
-                        # Someone's doing something unexpected
-                        filesysnum=0
-                        ;;
+			filesysnum=1
+            ;;
+        ext3)
+            filesysnum=3
+            ;;
+        ext4)
+            filesysnum=4
+            ;;
+        *)
+            # Someone's doing something unexpected
+            filesysnum=0
+            ;;
         esac
 	echo ${filesysnum}
 }
@@ -1199,33 +1199,33 @@ tput_results_to_pcp()
 		filesysnum=$(results_filesys2num ${filesys})
 
 		# Convert the "testmode" knob to five metrics
-                pcp_incache=0
-                pcp_incache_fsync=0
-                pcp_incache_mmap=0
-                pcp_directio=0
-                pcp_outofcache=0
+        pcp_incache=0
+        pcp_incache_fsync=0
+        pcp_incache_mmap=0
+    	pcp_directio=0
+        pcp_outofcache=0
 
 		# Set the test mode switches because we can't log strings as metrics
 		testmode=`echo ${resline} | cut -f 2 -d ,`
 		case "${testmode}" in
-	                incache)
-        	                pcp_incache=1
-                	        ;;
-	                incache+fsync)
-        	                pcp_incache_fsync=1
-                	        ;;
-	                incache+mmap)
-        	                pcp_incache_mmap=1
-                	        ;;
-	                directio)
-        	                pcp_directio=1
-                	        ;;
-	                outofcache)
-        	                pcp_outofcache=1
-                	        ;;
-	                *)
-        	                # Something's broken
-                esac
+	        incache)
+        	    pcp_incache=1
+                ;;
+	        incache+fsync)
+        	    pcp_incache_fsync=1
+                ;;
+	        incache+mmap)
+        	    pcp_incache_mmap=1
+                ;;
+	        directio)
+        	    pcp_directio=1
+                ;;
+	        outofcache)
+        	    pcp_outofcache=1
+                ;;
+	        *)
+        		# Something's broken
+            esac
 		
 		# Set the subtest switches because we can't log strings as metrics 
 
@@ -1305,67 +1305,66 @@ auto_results_to_pcp()
         numlines=`expr ${resfilelength} - ${headerline}`
 
         for resline in `tail -n ${numlines} ${1}`; do
-                # Build the argument line for results2pcp_multiple
+            # Build the argument line for results2pcp_multiple
+			# Filesys needs to be a number because openmetrics doesn't like strings
+            # We also need to account for support of future filesystems without
+            #  risking breaking database schemas et al
+            filesys=`echo ${resline} | cut -f 1 -d ,`
+			filesysnum=$(results_filesys2num ${filesys})
 
-		# Filesys needs to be a number because openmetrics doesn't like strings
-                # We also need to account for support of future filesystems without
-                #  risking breaking database schemas et al
-                filesys=`echo ${resline} | cut -f 1 -d ,`
-		filesysnum=$(results_filesys2num ${filesys})
+			# Convert the "testmode" knob to five metrics
+			pcp_incache=0
+			pcp_incache_fsync=0
+			pcp_incache_mmap=0
+			pcp_directio=0
+			pcp_outofcache=0
+            testmode=`echo ${resline} | cut -f 2 -d ,`
+			case "${testmode}" in
+				incache)
+					pcp_incache=1
+					;;
+				incache+fsync)
+					pcp_incache_fsync=1
+					;;
+				incache+mmap)
+					pcp_incache_mmap=1
+					;;
+				directio)
+					pcp_directio=1
+					;;
+				outofcache)
+					pcp_outofcache=1
+					;;
+				*)
+					# Something's broken
+			esac
 
-		# Convert the "testmode" knob to five metrics
-		pcp_incache=0
-		pcp_incache_fsync=0
-		pcp_incache_mmap=0
-		pcp_directio=0
-		pcp_outofcache=0
-                testmode=`echo ${resline} | cut -f 2 -d ,`
-		case "${testmode}" in
-		incache)
-			pcp_incache=1
-			;;
-		incache+fsync)
-			pcp_incache_fsync=1
-			;;
-		incache+mmap)
-			pcp_incache_mmap=1
-			;;
-		directio)
-			pcp_directio=1
-			;;
-		outofcache)
-			pcp_outofcache=1
-			;;
-		*)
-			# Something's broken
-		esac
+			pcp_all_ios=`echo ${resline} | cut -d , -f 3`
+			pcp_initwrite=`echo ${resline} | cut -d , -f 4`
+			pcp_rewrite=`echo ${resline} | cut -d , -f 5`
+			pcp_read=`echo ${resline} | cut -d , -f 6`
+			pcp_reread=`echo ${resline} | cut -d , -f 7`
+			pcp_rndread=`echo ${resline} | cut -d , -f 8`
+			pcp_rndwrite=`echo ${resline} | cut -d , -f 9`
+			pcp_backread=`echo ${resline} | cut -d , -f 10`
+			pcp_recrewrite=`echo ${resline} | cut -d , -f 11`
+			pcp_strideread=`echo ${resline} | cut -d , -f 12`
 
-		pcp_all_ios=`echo ${resline} | cut -d , -f 3`
-		pcp_initwrite=`echo ${resline} | cut -d , -f 4`
-		pcp_rewrite=`echo ${resline} | cut -d , -f 5`
-		pcp_read=`echo ${resline} | cut -d , -f 6`
-		pcp_reread=`echo ${resline} | cut -d , -f 7`
-		pcp_rndread=`echo ${resline} | cut -d , -f 8`
-		pcp_rndwrite=`echo ${resline} | cut -d , -f 9`
-		pcp_backread=`echo ${resline} | cut -d , -f 10`
-		pcp_recrewrite=`echo ${resline} | cut -d , -f 11`
-		pcp_strideread=`echo ${resline} | cut -d , -f 12`
-
-                # directio and incache+mmap don't do the last four so populate with NaN
-                #   to match the results file and make pcp happy
-                if [[ "${testmode}" == "directio" || "${testmode}" == "incache+mmap" ]]; then
-			pcp_fwrite=NaN
-			pcp_frewrite=NaN
-			pcp_fread=NaN
-			pcp_freread=NaN
-                else
-			pcp_fwrite=`echo ${resline} | cut -d , -f 13`
-			pcp_frewrite=`echo ${resline} | cut -d , -f 14`
-			pcp_fread=`echo ${resline} | cut -d , -f 15`
-			pcp_freread=`echo ${resline} | cut -d , -f 16`
-                fi
-		results2pcp_multiple "automode:1,filesys:${filesysnum},incache:${pcp_incache},incache_fsync:${pcp_incache_fsync},incache_mmap:${pcp_incache_mmap},directio:${pcp_directio},outofcache:${pcp_outofcache},all_ios:${pcp_all_ios},initwrite:${pcp_initwrite},rewrite:${pcp_rewrite},read:${pcp_read},reread:${pcp_reread},rndread:${pcp_rndread},rndwrite:${pcp_rndwrite},backread:${pcp_backread},recrewrite:${pcp_recrewrite},strideread:${pcp_strideread},fwrite:${pcp_fwrite},frewrite:${pcp_frewrite},fread:${pcp_fread},freread:${pcp_freread}"
-		sleep 3		# Make sure the poller picks up the new openmetrics before they change/shut down
+			# directio and incache+mmap don't do the last four so populate with NaN
+        	#   to match the results file and make pcp happy
+        	if [[ "${testmode}" == "directio" || "${testmode}" == "incache+mmap" ]]; then
+				pcp_fwrite=NaN
+				pcp_frewrite=NaN
+				pcp_fread=NaN
+				pcp_freread=NaN
+        	else
+				pcp_fwrite=`echo ${resline} | cut -d , -f 13`
+				pcp_frewrite=`echo ${resline} | cut -d , -f 14`
+				pcp_fread=`echo ${resline} | cut -d , -f 15`
+				pcp_freread=`echo ${resline} | cut -d , -f 16`
+        	fi
+			results2pcp_multiple "automode:1,filesys:${filesysnum},incache:${pcp_incache},incache_fsync:${pcp_incache_fsync},incache_mmap:${pcp_incache_mmap},directio:${pcp_directio},outofcache:${pcp_outofcache},all_ios:${pcp_all_ios},initwrite:${pcp_initwrite},rewrite:${pcp_rewrite},read:${pcp_read},reread:${pcp_reread},rndread:${pcp_rndread},rndwrite:${pcp_rndwrite},backread:${pcp_backread},recrewrite:${pcp_recrewrite},strideread:${pcp_strideread},fwrite:${pcp_fwrite},frewrite:${pcp_frewrite},fread:${pcp_fread},freread:${pcp_freread}"
+			sleep 3		# Make sure the poller picks up the new openmetrics before they change/shut down
         done
 	
 }
@@ -1807,7 +1806,6 @@ for fs in $filesystems; do
 		fi
 	fi
 done
-
 
 if [[ $run_results != "PASS"  ]]; then
         echo Failed >> ${results_dir}/test_results_report
