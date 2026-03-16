@@ -114,6 +114,7 @@ mount_list=""
 iozone_output_file=""
 filesys_to_use=""
 resultdir=""
+results_version="1.0"
 
 				### NOTE iozone ROUNDS TO NEXT LOWEST POWER OF 2. ###
 outcache_multiplier=4		# Multiplier for max out of cache file size compared to incache size.
@@ -1079,11 +1080,6 @@ invoke_test()
 			fi
 		done
 
-        # If we're using PCP, stop logging
-        if [[ $to_use_pcp -eq 1 ]]; then
-            echo "Stop PCP"
-        	stop_pcp
-        fi
 
 		#  Compute averages
 		if (( to_times_to_run > 1 )); then
@@ -1168,10 +1164,213 @@ execute_it()
 	fi
 }
 
+results_filesys2num()
+{
+	case ${1} in
+		xfs)
+			filesysnum=1
+            ;;
+        ext3)
+            filesysnum=3
+            ;;
+        ext4)
+            filesysnum=4
+            ;;
+        *)
+            # Someone's doing something unexpected
+            filesysnum=0
+            ;;
+        esac
+	echo ${filesysnum}
+}
+
+tput_results_to_pcp()
+{
+	echo "throughput results to pcp"
+	resfilelength=`wc -l ${1} | awk '{print $1}'`
+	headerline=`grep -n filesys ${1} | cut -f 1 -d :`       # The actual results start one line after this and run to the end of the file
+	numlines=`expr ${resfilelength} - ${headerline}`
+
+	for resline in `tail -n ${numlines} ${1}`; do
+		# Build the argument line for results2pcp_multiple
+		
+		# Turn the filesystem into a number
+		filesys=`echo ${resline} | cut -f 1 -d ,`
+		filesysnum=$(results_filesys2num ${filesys})
+
+		# Convert the "testmode" knob to five metrics
+        pcp_incache=0
+        pcp_incache_fsync=0
+        pcp_incache_mmap=0
+    	pcp_directio=0
+        pcp_outofcache=0
+
+		# Set the test mode switches because we can't log strings as metrics
+		testmode=`echo ${resline} | cut -f 2 -d ,`
+		case "${testmode}" in
+	        incache)
+        	    pcp_incache=1
+                ;;
+	        incache+fsync)
+        	    pcp_incache_fsync=1
+                ;;
+	        incache+mmap)
+        	    pcp_incache_mmap=1
+                ;;
+	        directio)
+        	    pcp_directio=1
+                ;;
+	        outofcache)
+        	    pcp_outofcache=1
+                ;;
+	        *)
+        		# Something's broken
+            esac
+		
+		# Set the subtest switches because we can't log strings as metrics 
+
+		pcp_initwrite=0
+		pcp_rewrite=0
+		pcp_read=0
+		pcp_reread=0
+		pcp_backread=0
+		pcp_strideread=0
+		pcp_rndread=0
+		pcp_mixedworkload=0
+		pcp_rndwrite=0
+		pcp_pwrite=0
+		pcp_pread=0
+		pcp_fwrite=0
+		pcp_fread=0
+		subtest=`echo ${resline} | cut -f 3 -d ,`
+		case ${subtest} in
+			Initialwrite)
+				pcp_initwrite=1
+				;;
+			Rewrite)
+				pcp_rewrite=1
+				;;
+			Read)
+				pcp_read=1
+				;;
+			Reread)
+				pcp_reread=1
+				;;
+			Randomread)
+				pcp_rndread=1
+				;;
+			Mixedworkload)
+				pcp_mixedworkload=1
+				;;
+			Randomwrite)
+				pcp_rndwrite=1
+				;;
+			ReverseRead)
+				pcp_backread=1
+				;;
+			Strideread)
+				pcp_strideread=1
+				;;
+			Pwrite)
+				pcp_pwrite=1
+				;;
+			Pread)
+				pcp_pread=1
+				;;
+			Fwrite)
+				pcp_fwrite=1
+				;;
+			Fread)
+				pcp_fread=1
+				;;
+			*)
+				# Imaginary subtest
+				;;
+		esac
+
+		proc1=`echo ${resline} | cut -d , -f 4`
+		proc2=`echo ${resline} | cut -d , -f 5`
+		proc4=`echo ${resline} | cut -d , -f 6`
+		results2pcp_multiple "automode:0,filesys:${filesysnum},incache:${pcp_incache},incache_fsync:${pcp_incache_fsync},incache_mmap:${pcp_incache_mmap},directio:${pcp_directio},outofcache:${pcp_outofcache},initwrite:${pcp_initwrite},rewrite:${pcp_rewrite},read:${pcp_read},reread:${pcp_reread},rndread:${pcp_rndread},backread:${pcp_backread},mixedworkload:${pcp_mixedworkload},rndwrite:${pcp_rndwrite},strideread:${pcp_strideread},pwrite:${pcp_pwrite},pread:${pcp_pread},fwrite:${pcp_fwrite},fread:${pcp_fread},tput1proc:${proc1},tput2proc:${proc2},tput4proc:${proc4}"
+		sleep 3
+	done
+}
+
+
+auto_results_to_pcp()
+{
+	echo "auto results to pcp"
+        resfilelength=`wc -l ${1} | awk '{print $1}'`
+        headerline=`grep -n all_ios ${1} | cut -f 1 -d :`       # The actual results start one line after this and run to the end of the file
+        numlines=`expr ${resfilelength} - ${headerline}`
+
+        for resline in `tail -n ${numlines} ${1}`; do
+            # Build the argument line for results2pcp_multiple
+			# Filesys needs to be a number because openmetrics doesn't like strings
+            # We also need to account for support of future filesystems without
+            #  risking breaking database schemas et al
+            filesys=`echo ${resline} | cut -f 1 -d ,`
+			filesysnum=$(results_filesys2num ${filesys})
+
+			# Convert the "testmode" knob to five metrics
+			pcp_incache=0
+			pcp_incache_fsync=0
+			pcp_incache_mmap=0
+			pcp_directio=0
+			pcp_outofcache=0
+            testmode=`echo ${resline} | cut -f 2 -d ,`
+			case "${testmode}" in
+				incache)
+					pcp_incache=1
+					;;
+				incache+fsync)
+					pcp_incache_fsync=1
+					;;
+				incache+mmap)
+					pcp_incache_mmap=1
+					;;
+				directio)
+					pcp_directio=1
+					;;
+				outofcache)
+					pcp_outofcache=1
+					;;
+				*)
+					# Something's broken
+			esac
+
+			pcp_all_ios=`echo ${resline} | cut -d , -f 3`
+			pcp_initwrite=`echo ${resline} | cut -d , -f 4`
+			pcp_rewrite=`echo ${resline} | cut -d , -f 5`
+			pcp_read=`echo ${resline} | cut -d , -f 6`
+			pcp_reread=`echo ${resline} | cut -d , -f 7`
+			pcp_rndread=`echo ${resline} | cut -d , -f 8`
+			pcp_rndwrite=`echo ${resline} | cut -d , -f 9`
+			pcp_backread=`echo ${resline} | cut -d , -f 10`
+			pcp_recrewrite=`echo ${resline} | cut -d , -f 11`
+			pcp_strideread=`echo ${resline} | cut -d , -f 12`
+
+			# directio and incache+mmap don't do the last four so populate with NaN
+        	#   to match the results file and make pcp happy
+        	if [[ "${testmode}" == "directio" || "${testmode}" == "incache+mmap" ]]; then
+				pcp_fwrite=NaN
+				pcp_frewrite=NaN
+				pcp_fread=NaN
+				pcp_freread=NaN
+        	else
+				pcp_fwrite=`echo ${resline} | cut -d , -f 13`
+				pcp_frewrite=`echo ${resline} | cut -d , -f 14`
+				pcp_fread=`echo ${resline} | cut -d , -f 15`
+				pcp_freread=`echo ${resline} | cut -d , -f 16`
+        	fi
+			results2pcp_multiple "automode:1,filesys:${filesysnum},incache:${pcp_incache},incache_fsync:${pcp_incache_fsync},incache_mmap:${pcp_incache_mmap},directio:${pcp_directio},outofcache:${pcp_outofcache},all_ios:${pcp_all_ios},initwrite:${pcp_initwrite},rewrite:${pcp_rewrite},read:${pcp_read},reread:${pcp_reread},rndread:${pcp_rndread},rndwrite:${pcp_rndwrite},backread:${pcp_backread},recrewrite:${pcp_recrewrite},strideread:${pcp_strideread},fwrite:${pcp_fwrite},frewrite:${pcp_frewrite},fread:${pcp_fread},freread:${pcp_freread}"
+			sleep 3		# Make sure the poller picks up the new openmetrics before they change/shut down
+        done
+	
+}
+
 reduce_auto_data()
 {
-        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-		echo "# IOzone_runmode: auto" >> /tmp/results.csv
   
         # Which directory to use depends on whether is's a single or multipass run
         if [[ $to_times_to_run -gt 1 ]]; then
@@ -1180,39 +1379,51 @@ reduce_auto_data()
                 resdir="Run_1"
         fi
 
-        # Add the column headers
-        echo "fs.mode:all_ios:initwrite:rewrite:read:reread:rndread:rndwrite:backread:recrewrite:strideread:fwrite:frewrite:fread:freread" >> /tmp/results.csv
+        # Add the front matter and column headers
+        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
 
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
-                # Left to right:
-                # Find lines containing ALL (there are more than we need)
-                # Get rid of the ones we don't need
-                # Get rid of "iozone_"
-                # Get rid of the part of the filename we don't need
-                # "ALL" has served its purpose, don't need it in the CSV
-                # Turn the tabs into colons
-                # Drop the trailing colon
-                # Turn the directory slash into a dot to make fs.mode
-                grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */:/g;s/.$//;s/\//./" >> /tmp/results.csv
+            # Left to right:
+            # Find lines containing ALL (there are more than we need)
+            # Get rid of the ones we don't need
+            # Get rid of "iozone_"
+            # Get rid of the part of the filename we don't need
+            # "ALL" has served its purpose, don't need it in the CSV
+            # Turn the tabs into comma
+            # Drop the trailing comma
+            # Turn the directory slash into a comma to make fs,mode
+            grep -H ALL ${resfs}/*.log | grep -v FILE  | grep -v RECORD | sed -e "s/iozone_//;s/_default_analysis+rawdata.log://;s/ALL//;s/  */,/g;s/.$//;s/\//,/" > /tmp/fs_results_iozone.csv
+			# Pad the lines for mmap and directio so the start/end times are in the right column
+			sed -i '/directio\|mmap/s/$/,NaN,NaN,NaN,NaN/' /tmp/fs_results_iozone.csv
+			# Append the start/end times for the filesystem
+			started_time=`cat /tmp/iozone_${resfs}_start_time`
+			ended_time=`cat /tmp/iozone_${resfs}_end_time`
+			sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
+			# Tack the fs results onto the end of the main results file and clean up after ourselves
+			cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+			rm /tmp/fs_results_iozone.csv
+
+			# Get the results into the PCP archive
+			if [[ $to_use_pcp -eq 1 ]]; then
+				auto_results_to_pcp /tmp/results_iozone.csv
+			fi
         done
         popd >& /dev/null
 }
 
 reduce_non_auto_data()
 {
-	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $iozone_version --test_name $test_name
-	$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "IOzone mode: Throughput" --results_file /tmp/results.csv
-
 	# The averaging script wasn't meant for throughput mode
 	resdir="Run_1"
 	# Add the column headers
-	echo filesys:mode:op:${file_count_list} | sed 's/ /proc:/g; s/$/proc/' >> /tmp/results.csv
-
-        pushd ${results_dir}/${resdir} >& /dev/null
-        for resfs in $filesystems
-        do
+	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name  --field_header "filesys,mode,op,${procheaders}"
+:
+    pushd ${results_dir}/${resdir} >& /dev/null
+    for resfs in $filesystems
+    do
 		cd ${resfs}
 		for testmode in incache incache_fsync incache_mmap directio outofcache
 		do
@@ -1222,16 +1433,26 @@ reduce_non_auto_data()
 				# Remove the top three lines, we don't need them
 				# Turn two-word subtest names into one word
 				# We don't need the double quotes anymore, get rid of them
-				# Turn groups of spaces in between fields into colons
-				# Lose the trailing colon
+				# Turn groups of spaces in between fields into commas
+				# Lose the trailing comma
 				# Put filesystem and testmode at the front
-				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */:/g;s/.$//;s/./${resfs}:${testmode}:/" >> /tmp/results.csv
+				grep \" *${testmode}_*.iozone | sed -e "1,3d;s/ r/r/;s/-//;s/ Rea/Rea/;s/ w/w/;s/\"//g;s/  */,/g;s/.$//;s/./${resfs},${testmode},/" > /tmp/fs_results_iozone.csv
+				# Append the start/end times for the filesystem
+                started_time=`cat /tmp/iozone_${resfs}_start_time`
+                ended_time=`cat /tmp/iozone_${resfs}_end_time`
+                sed -i "s/$/,${started_time},${ended_time}/g" /tmp/fs_results_iozone.csv
+                # Tack the fs results onto the end of the main results file and clean up after ourselves
+                cat /tmp/fs_results_iozone.csv >> /tmp/results_iozone.csv
+                rm /tmp/fs_results_iozone.csv
 			fi
 		done
 		cd ..
-        done
-        popd >& /dev/null
-
+		# Get the results into the PCP archive
+                if [[ $to_use_pcp -eq 1 ]]; then
+			tput_results_to_pcp /tmp/results_iozone.csv
+		fi
+    done
+    popd >& /dev/null
 }
 
 obtain_disks()
@@ -1542,7 +1763,7 @@ fi
 if [[ $to_use_pcp -eq 1 ]]; then
         source $TOOLS_BIN/pcp/pcp_commands.inc
         setup_pcp
-        pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+        pcp_cfg=${run_dir}/iozone_pmlogger.cfg
 fi
 
 #
@@ -1571,7 +1792,11 @@ for fs in $filesystems; do
 		done
 	fi
 	filesys_to_use=$fs
+	# Mark fs start time
+	echo $(retrieve_time_stamp) > /tmp/iozone_${fs}_start_time
 	execute_it $fs
+	# Mark fs end time
+	echo $(retrieve_time_stamp) > /tmp/iozone_${fs}_end_time
 	if [ $mount_index  -ne 0 ]; then
 		if [ $lvm_disk -eq 1 ]; then
 			$TOOLS_BIN/lvm_delete --lvm_vol iozone --lvm_grp iozone --mount_pnt ${mount_list}
@@ -1597,14 +1822,21 @@ else
 	cp -R ${results_dir} ${out_dir}
 fi
 
+# If we're using PCP, stop logging
+# This has to come after reduce_*_data in order to get the final results into the archive
+if [[ $to_use_pcp -eq 1 ]]; then
+	echo "Stop PCP"
+      	stop_pcp
+fi
+
 # Archive results into single tarball
 #
 pushd /tmp >& /dev/null
 
 archive_file="iozone-results.tar.gz"
 make_dir $results_dir
-echo mv /tmp/results.csv ${results_dir} 
-mv /tmp/results.csv ${results_dir} 
+echo mv /tmp/results_iozone.csv ${results_dir} 
+mv /tmp/results_iozone.csv ${results_dir} 
 pushd ${results_dir} > /dev/null
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
