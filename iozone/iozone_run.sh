@@ -343,9 +343,10 @@ fi
 source ${TOOLS_BIN}/general_setup "$@"
 
 # Install needed packages based on what's listed in the wrapper's json file
-${TOOLS_BIN}/package_tool --no_packages $to_no_pkg_install --wrapper_config ${run_dir}/iozone-wrapper.json
-if [[ $? -ne 0 ]]; then
-        exit_out "package_tool reported failure installing dependencies." 1
+package_tool --no_packages $to_no_pkg_install --wrapper_config ${run_dir}/iozone-wrapper.json
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+        exit_out "package_tool reported failure installing dependencies." $rtc
 fi
 
 #
