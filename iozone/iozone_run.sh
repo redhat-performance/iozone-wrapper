@@ -1409,8 +1409,8 @@ reduce_auto_data()
         fi
 
         # Add the front matter and column headers
-        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
-
+        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+		echo ${results_header_str} >> /tmp/results_iozone.csv
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
@@ -1447,9 +1447,8 @@ reduce_non_auto_data()
 	# The averaging script wasn't meant for throughput mode
 	resdir="Run_1"
 	# Add the column headers
-	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
-	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name  --field_header "filesys,mode,op,${procheaders}"
-:
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+	echo ${results_header_str} >> /tmp/results_iozone.csv
     pushd ${results_dir}/${resdir} >& /dev/null
     for resfs in $filesystems
     do
@@ -1742,6 +1741,17 @@ if [[ $results_dir == "" ]]; then
 		results_dir=`pwd`
 	fi
 fi
+
+# By now we know which mode's header string and schema file to use
+if [[ ${auto} -eq 1 ]]; then
+	results_header_str="fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread,Start_Date,End_Date"
+	results_schema_file=results_iozone_auto_schema.py
+else
+	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
+	results_header_str="filesys,mode,op,${procheaders},Start_Date,End_Date"
+	results_schema_file=results_iozone_tput_schema.py
+fi
+	
 
 # Make a PCP results dir if necessary
 if [[ $to_use_pcp -eq 1 ]]; then
