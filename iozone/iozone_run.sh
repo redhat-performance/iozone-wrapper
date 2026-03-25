@@ -1868,6 +1868,23 @@ if [[ $to_use_pcp -eq 1 ]]; then
       	stop_pcp
 fi
 
+# Data reduction is done, now run the validation sequence
+#
+tmp_file=$(mktemp /tmp/iozone_results.XXXXX)
+echo $header_txt > $tmp_file
+grep -v "^#" /tmp/results_fio.csv | grep -v "^op" >> $tmp_file
+${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file results_iozone.json
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+	exit out "Error: csv_to_json failed" $rtc
+fi
+${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/${results_schema_file} --class_name Iozone_Results --file results_iozone.json
+
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+	exit_out "Error: IOzone data verification failed" $rtc
+fi
+
 # Archive results into single tarball
 #
 pushd /tmp >& /dev/null
