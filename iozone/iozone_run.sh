@@ -346,7 +346,7 @@ source ${TOOLS_BIN}/general_setup "$@"
 package_tool --no_packages $to_no_pkg_install --wrapper_config ${run_dir}/iozone-wrapper.json
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
-        exit_out "package_tool reported failure installing dependencies." $rtc
+        exit_out "package_tool reported failure installing dependencies." $E_GENERAL
 fi
 
 #
@@ -1876,13 +1876,13 @@ grep -v "^#" /tmp/results_fio.csv | grep -v "^op" >> $tmp_file
 ${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file results_iozone.json
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
-	exit out "Error: csv_to_json failed" $rtc
+	exit out "Error: csv_to_json failed" $E_GENERAL
 fi
 ${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/${results_schema_file} --class_name Iozone_Results --file results_iozone.json
 
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
-	exit_out "Error: IOzone data verification failed" $rtc
+	exit_out "Error: IOzone data verification failed" $E_GENERAL
 fi
 
 # Archive results into single tarball
