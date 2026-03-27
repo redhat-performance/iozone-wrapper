@@ -1872,14 +1872,14 @@ fi
 tmp_file=$(mktemp /tmp/iozone_results.XXXXX)
 echo $results_header_str > $tmp_file
 grep -v "^#" /tmp/results_iozone.csv | grep -v "^fs" >> $tmp_file
-${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file results_iozone.json
+${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file /tmp/results_iozone.json
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
 	exit out "Error: csv_to_json failed" $E_GENERAL
 fi
 # The conversion to JSON turns NaNs to nulls, put the NaNs back
 sed -i 's/null/NaN/g' results_iozone.json
-${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $run_dir/${results_schema_file} --class_name Iozone_Results --file results_iozone.json
+${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $run_dir/${results_schema_file} --class_name Iozone_Results --file /tmp/results_iozone.json
 
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
@@ -1894,7 +1894,7 @@ archive_file="iozone-results.tar.gz"
 make_dir $results_dir
 echo mv /tmp/results_iozone.csv ${results_dir} 
 mv /tmp/results_iozone.csv ${results_dir} 
-mv results_iozone.json ${results_dir} 
+mv /tmp/results_iozone.json ${results_dir} 
 pushd ${results_dir} > /dev/null
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
