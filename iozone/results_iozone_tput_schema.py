@@ -9,8 +9,8 @@ class Filesys(Enum):
 class Testmode(Enum):
         directio = "directio"
         incache = "incache"
-        incache+fsync = "incache+fsync"
-        incache+mmap = "incache+mmap"
+        incache_fsync = "incache+fsync"
+        incache_mmap = "incache+mmap"
         outcache = "outcache"
 
 class Operation(Enum):
@@ -29,12 +29,12 @@ class Operation(Enum):
 	Fread = "Fread"
 
 class Iozone_Results (pydantic.BaseModel):
-	filesys: Filesys
-	testmode: Testmode
+	fs: Filesys
+	mode: Testmode
 	op: Operation
-	1proc: float = pydantic.Field(gt=0, allow_inf_nan=False)
-	2proc: float = pydantic.Field(gt=0, allow_inf_nan=False)
-	4proc: float = pydantic.Field(gt=0, allow_inf_nan=False)
+	proc1: float = pydantic.Field(gt=0, allow_inf_nan=False)
+	proc2: float = pydantic.Field(gt=0, allow_inf_nan=False)
+	proc4: float = pydantic.Field(gt=0, allow_inf_nan=False)
 	Start_Date: datetime.datetime
 	End_Date: datetime.datetime
 

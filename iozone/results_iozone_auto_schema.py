@@ -9,13 +9,13 @@ class Filesys(Enum):
 class Testmode(Enum):
 	directio = "directio"
 	incache = "incache"
-	incache+fsync = "incache+fsync"
-	incache+mmap = "incache+mmap"
+	incache_fsync = "incache+fsync"
+	incache_mmap = "incache+mmap"
 	outcache = "outcache"
 
 class Iozone_Results (pydantic.BaseModel):
-	filesys: Filesys
-	testmode: Testmode
+	fs: Filesys
+	mode: Testmode
 	all_ios: int = pydantic.Field(gt=0)
 	initwrite: int = pydantic.Field(gt=0)
 	rewrite: int = pydantic.Field(gt=0)
@@ -26,9 +26,9 @@ class Iozone_Results (pydantic.BaseModel):
 	backread: int = pydantic.Field(gt=0)
 	recrewrite: int = pydantic.Field(gt=0)
 	strideread: int = pydantic.Field(gt=0)
-	fwrite: int = pydantic.Field(gt=0)
-	frewrite: int = pydantic.Field(gt=0)
-	fread: int = pydantic.Field(gt=0)
-	freread: int = pydantic.Field(gt=0)
+	fwrite: float = pydantic.Field()
+	frewrite: float = pydantic.Field()
+	fread: float = pydantic.Field()
+	freread: float = pydantic.Field()
 	Start_Date: datetime.datetime
 	End_Date: datetime.datetime

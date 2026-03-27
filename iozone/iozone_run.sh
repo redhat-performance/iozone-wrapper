@@ -1410,7 +1410,7 @@ reduce_auto_data()
 
         # Add the front matter and column headers
         $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
-		echo ${results_header_str} >> /tmp/results_iozone.csv
+	echo ${results_header_str} >> /tmp/results_iozone.csv
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
@@ -1747,8 +1747,8 @@ if [[ ${auto} -eq 1 ]]; then
 	results_header_str="fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread,Start_Date,End_Date"
 	results_schema_file=results_iozone_auto_schema.py
 else
-	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
-	results_header_str="filesys,mode,op,${procheaders},Start_Date,End_Date"
+	procheaders=`echo ${file_count_list} | sed 's/^/proc/; s/ /,proc/g'`
+	results_header_str="fs,mode,op,${procheaders},Start_Date,End_Date"
 	results_schema_file=results_iozone_tput_schema.py
 fi
 	
@@ -1871,14 +1871,16 @@ fi
 # Data reduction is done, now run the validation sequence
 #
 tmp_file=$(mktemp /tmp/iozone_results.XXXXX)
-echo $header_txt > $tmp_file
-grep -v "^#" /tmp/results_fio.csv | grep -v "^op" >> $tmp_file
+echo $results_header_str > $tmp_file
+grep -v "^#" /tmp/results_iozone.csv | grep -v "^fs" >> $tmp_file
 ${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file results_iozone.json
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
 	exit out "Error: csv_to_json failed" $E_GENERAL
 fi
-${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/${results_schema_file} --class_name Iozone_Results --file results_iozone.json
+# The conversion to JSON turns NaNs to nulls, put the NaNs back
+sed -i 's/null/NaN/g' results_iozone.json
+${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $run_dir/${results_schema_file} --class_name Iozone_Results --file results_iozone.json
 
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
