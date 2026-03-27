@@ -278,7 +278,7 @@ done
 
 #
 # Check to see if the test tools directory exists.  If it does, we do not need to
-# clone the repo. 
+# clone the repo.
 #
 # Note: this is the "standard way" as of March 2026
 #
