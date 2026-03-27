@@ -56,10 +56,6 @@ arguments="$@"
 test_name="iozone"
 iozone_version="v1.0"
 
-
-# Gather hardware information
-${TOOLS_BIN}/gather_data ${curdir}
-
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
@@ -323,6 +319,9 @@ attempt_tools_curl
 attempt_tools_git
 
 # End of test tools installation
+
+# Gather hardware information
+${TOOLS_BIN}/gather_data ${curdir}
 
 if [ $report_usage -eq 1 ]; then
 	usage $0
