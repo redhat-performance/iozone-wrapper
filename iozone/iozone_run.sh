@@ -1894,6 +1894,7 @@ archive_file="iozone-results.tar.gz"
 make_dir $results_dir
 echo mv /tmp/results_iozone.csv ${results_dir} 
 mv /tmp/results_iozone.csv ${results_dir} 
+mv results_iozone.json ${results_dir} 
 pushd ${results_dir} > /dev/null
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
