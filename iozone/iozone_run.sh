@@ -1878,7 +1878,7 @@ if [[ $rtc -ne 0 ]]; then
 	exit out "Error: csv_to_json failed" $E_GENERAL
 fi
 # The conversion to JSON turns NaNs to nulls, put the NaNs back
-sed -i 's/null/NaN/g' results_iozone.json
+sed -i 's/null/NaN/g' /tmp/results_iozone.json
 ${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $run_dir/${results_schema_file} --class_name Iozone_Results --file /tmp/results_iozone.json
 
 rtc=$?
