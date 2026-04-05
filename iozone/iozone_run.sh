@@ -1875,7 +1875,7 @@ grep -v "^#" /tmp/results_iozone.csv | grep -v "^fs" >> $tmp_file
 ${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file /tmp/results_iozone.json
 rtc=$?
 if [[ $rtc -ne 0 ]]; then
-	exit out "Error: csv_to_json failed" $E_GENERAL
+	exit_out "Error: csv_to_json failed" $E_GENERAL
 fi
 # The conversion to JSON turns NaNs to nulls, put the NaNs back
 sed -i 's/null/NaN/g' /tmp/results_iozone.json
