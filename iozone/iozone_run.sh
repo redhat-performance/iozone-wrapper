@@ -1452,7 +1452,7 @@ reduce_non_auto_data()
     for resfs in $filesystems
     do
 		cd ${resfs}
-		for testmode in incache incache_fsync incache_mmap directio outofcache
+		for testmode in incache incache+fsync incache+mmap directio outofcache
 		do
 			if compgen -G *${testmode}_*.iozone > /dev/null; then
 				# Left to right:
