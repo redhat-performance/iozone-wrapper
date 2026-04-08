@@ -56,10 +56,6 @@ arguments="$@"
 test_name="iozone"
 iozone_version="v1.0"
 
-
-# Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
-
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
@@ -168,6 +164,9 @@ modes2run=0;
 args_fs_types=""
 
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
+TOOLS_BIN="$HOME/test_tools"
+export TOOLS_BIN
+
 #
 # Config info
 #
@@ -258,7 +257,7 @@ usage()
 	echo "   --devices_to_use /dev/nvme3n1,/dev/nvme2n1 --filesystems xfs --file_count_list 1,2"
 	echo "   --test_prefix io_test_all --max_file_size 64"
 	echo "   --test_type 0,1,2,3,4,5,6,7,8,9,10,11,12"
-	source test_tools/general_setup --usage
+	source ${TOOLS_BIN}/general_setup --usage
 }
 
 #
@@ -267,14 +266,6 @@ usage()
 report_usage=0
 found=0
 for arg in "$@"; do
-	if [ $found -eq 1 ]; then
-		tools_git=$arg
-		break;
-	fi
-	if [[ $arg == "--tools_git" ]]; then
-		found=1
-	fi
-
 	#
 	# We do the usage check here, as we do not want to be calling
 	# the common parsers then checking for usage here.  Doing so will
@@ -289,12 +280,48 @@ done
 # Check to see if the test tools directory exists.  If it does, we do not need to
 # clone the repo.
 #
-if [ ! -d "test_tools" ]; then
-        git clone $tools_git test_tools
-        if [ $? -ne 0 ]; then
-                exit_out "pulling git $tools_git failed." 1
+# Note: this is the "standard way" as of March 2026
+#
+attempt_tools_wget()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                wget ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
         fi
-fi
+}
+attempt_tools_curl()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                curl -L -O ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
+        fi
+}
+attempt_tools_git()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                git clone $tools_git "$TOOLS_BIN"
+                if [ $? -ne 0 ]; then
+                        exit_out "Error: pulling git $tools_git failed." 101
+                fi
+        fi
+}
+
+attempt_tools_wget
+attempt_tools_curl
+attempt_tools_git
+
+# End of test tools installation
+
+# Gather hardware information
+${TOOLS_BIN}/gather_data ${curdir}
 
 if [ $report_usage -eq 1 ]; then
 	usage $0
@@ -312,12 +339,13 @@ fi
 # to_tuned_setting: tuned setting
 #
 
-source test_tools/general_setup "$@"
+source ${TOOLS_BIN}/general_setup "$@"
 
 # Install needed packages based on what's listed in the wrapper's json file
-${TOOLS_BIN}/package_tool --no_packages $to_no_pkg_install --wrapper_config ${run_dir}/iozone-wrapper.json
-if [[ $? -ne 0 ]]; then
-        exit_out "package_tool reported failure installing dependencies." 1
+package_tool --wrapper_config ${run_dir}/iozone-wrapper.json
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+        exit_out "package_tool reported failure installing dependencies." $E_GENERAL
 fi
 
 #
@@ -1380,8 +1408,8 @@ reduce_auto_data()
         fi
 
         # Add the front matter and column headers
-        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread"
-
+        $TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+	echo ${results_header_str} >> /tmp/results_iozone.csv
         pushd ${results_dir}/${resdir} >& /dev/null
         for resfs in $filesystems
         do
@@ -1418,14 +1446,13 @@ reduce_non_auto_data()
 	# The averaging script wasn't meant for throughput mode
 	resdir="Run_1"
 	# Add the column headers
-	procheaders=`echo ${file_count_list} | sed 's/ /proc,/g; s/$/proc/'`
-	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name  --field_header "filesys,mode,op,${procheaders}"
-:
+	$TOOLS_BIN/test_header_info --front_matter --results_file /tmp/results_iozone.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+	echo ${results_header_str} >> /tmp/results_iozone.csv
     pushd ${results_dir}/${resdir} >& /dev/null
     for resfs in $filesystems
     do
 		cd ${resfs}
-		for testmode in incache incache_fsync incache_mmap directio outofcache
+		for testmode in incache incache+fsync incache+mmap directio outofcache
 		do
 			if compgen -G *${testmode}_*.iozone > /dev/null; then
 				# Left to right:
@@ -1714,6 +1741,17 @@ if [[ $results_dir == "" ]]; then
 	fi
 fi
 
+# By now we know which mode's header string and schema file to use
+if [[ ${auto} -eq 1 ]]; then
+	results_header_str="fs,mode,all_ios,initwrite,rewrite,read,reread,rndread,rndwrite,backread,recrewrite,strideread,fwrite,frewrite,fread,freread,Start_Date,End_Date"
+	results_schema_file=results_iozone_auto_schema.py
+else
+	procheaders=`echo ${file_count_list} | sed 's/^/proc/; s/ /,proc/g'`
+	results_header_str="fs,mode,op,${procheaders},Start_Date,End_Date"
+	results_schema_file=results_iozone_tput_schema.py
+fi
+	
+
 # Make a PCP results dir if necessary
 if [[ $to_use_pcp -eq 1 ]]; then
        pcpdir=${results_dir}/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
@@ -1813,7 +1851,7 @@ else
 fi
 
 cp ${curdir}/meta_data.yml $results_dir
-${curdir}/test_tools/move_data $curdir ${results_dir}
+${TOOLS_BIN}/move_data $curdir ${results_dir}
 if [[ $auto -eq 0 ]]; then
 	reduce_non_auto_data $iozone_output_file > $out_dir/iozone_summary
 	cp -R ${results_dir} $out_dir
@@ -1829,6 +1867,25 @@ if [[ $to_use_pcp -eq 1 ]]; then
       	stop_pcp
 fi
 
+# Data reduction is done, now run the validation sequence
+#
+tmp_file=$(mktemp /tmp/iozone_results.XXXXX)
+echo $results_header_str > $tmp_file
+grep -v "^#" /tmp/results_iozone.csv | grep -v "^fs" >> $tmp_file
+${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file $tmp_file --output_file /tmp/results_iozone.json
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+	exit_out "Error: csv_to_json failed" $E_GENERAL
+fi
+# The conversion to JSON turns NaNs to nulls, put the NaNs back
+sed -i 's/null/NaN/g' /tmp/results_iozone.json
+${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $run_dir/${results_schema_file} --class_name Iozone_Results --file /tmp/results_iozone.json
+
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
+	exit_out "Error: IOzone data verification failed" $E_GENERAL
+fi
+
 # Archive results into single tarball
 #
 pushd /tmp >& /dev/null
@@ -1837,10 +1894,11 @@ archive_file="iozone-results.tar.gz"
 make_dir $results_dir
 echo mv /tmp/results_iozone.csv ${results_dir} 
 mv /tmp/results_iozone.csv ${results_dir} 
+mv /tmp/results_iozone.json ${results_dir} 
 pushd ${results_dir} > /dev/null
 tar cf /tmp/results_iozone_${to_tuned_setting}.tar *
 popd > /dev/null
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name} --tuned_setting=$to_tuned_setting --version None --user $to_user
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --tar_file "/tmp/results_iozone_${to_tuned_setting}.tar" --test_name ${test_name} --tuned_setting=$to_tuned_setting --version None --user $to_user
 popd >& /dev/null
 
 # Shutdown PCP and clean up after ourselves
