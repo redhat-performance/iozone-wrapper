@@ -131,7 +131,7 @@ buildrunlog=${results_dir}/build-run.log
 arch=`arch | sed 's/i686/i386/'`
 
 testing_dir=`pwd`
-iozone_kit=iozone3_490
+iozone_kit=iozone3_508
 
 do_incache=0
 do_incache_fsync=0
