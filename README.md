@@ -65,6 +65,15 @@ Output Options:
 General test_tools options:
   --tools_git <value>: Git repo to retrieve the required tools from.
       Default: https://github.com/redhat-performance/test_tools-wrappers
+  --test_tools_release <value>: Version tag of test_tools to use.
+  --no_system_packages: Skip system package manager installation (dnf/yum/apt).
+  --no_pip_packages: Skip Python pip package installation.
+  --run_user <value>: User running the test on the target system. Defaults to current user.
+  --sysname <value>: System name used for determining config files. Defaults to hostname.
+  --run_label <value>: Label for the test run.
+  --verify_skip: Skip test verification against output.
+  --json_skip: Skip JSON conversion of CSV results.
+  --debug: Enable bash -x output for debugging.
   --verbose: Enable verbose shell output (set -x).
   --help / --usage: Display usage information.
 ```
