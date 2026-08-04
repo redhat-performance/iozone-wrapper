@@ -1667,8 +1667,8 @@ while [[ $# -gt 0 ]]; do
 			outcache_multiplier=$2
 			shift 1
 		;;
-		--pagesize)
-			pagesize=$2
+		--page_size)
+			page_size=$2
 			shift 1
 		;;
 		--quick)
