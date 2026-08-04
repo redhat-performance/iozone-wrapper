@@ -51,7 +51,7 @@ File & Filesystem Options:
 Iozone-Specific Options:
   --iozone_kit <kit>: Iozone package to download (default: iozone3_490).
   --auto: Use auto-mode testing instead of throughput mode.
-  --page_size <KB>: Minimum file size for auto-mode (default: 1024 KB).
+  --min_file_size <KB>: Minimum file size for auto-mode (default: 1024 KB).
   --quick <factor>: Divisor for in-cache memory to speed up tests (default: 1).
   --test_type <0,1,2,...>: Iozone test types (0=write, 1=read, etc.; default: 0,1).
   --iozone_options <args>: Additional iozone arguments passed directly to the binary.
