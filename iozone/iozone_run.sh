@@ -90,7 +90,7 @@ results_dir=`pwd`/results
 devices_to_use="grab_disks"
 out_dir=""
 mount_location="/iozone/iozone"
-page_size=1024
+min_file_size=1024
 total_memory=0
 memory4_pagecache=0
 incache_memory=0
@@ -227,7 +227,7 @@ usage()
 	echo "auto: operate in auto mode"
 	echo "iozone_umount: remount between tests.  Only 1 mount point supported."
 	echo "    Defaul is no"
-	echo "page_size <x>: Minimum file size in kBytes for auto mode. Default is 1024"
+	echo "min_file_size <x>: Minimum file size in kBytes for auto mode. Default is 1024"
 	echo "quick <x>: Factor used to speed-up the runs."
 	echo "   incache_memory=incache_memory/do_quick.  Default is 1"
 	echo "test_type: Comma separated list of tests to run.  Default is 0,1"
@@ -680,8 +680,8 @@ do_test_actual()
 			else
 				let "file_size=$max_file_size"
 				echo ================================================ >> ${iozone_output_file}
-				echo ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
-				time taskset -c 0 ${iozone_exe} -R ${4} ${6} -r ${page_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
+				echo ${iozone_exe} -R ${4} ${6} -r ${min_file_size} -s${file_size}g -c -w -C ${iozone_args}-F ${5} >> ${iozone_output_file}
+				time taskset -c 0 ${iozone_exe} -R ${4} ${6} -r ${min_file_size} -s${file_size}g -c -w -C ${iozone_args} -F ${5} >> ${iozone_output_file}
 				status=$?
 			fi
 
@@ -935,7 +935,7 @@ print_system_and_run_info()
 	fmt_printline "  readahead for LUN above"		       		"${readahead}"
 	echo ""
 	fmt_printline "IOZONE version"					`${iozone_exe} -v | grep Version | awk '{ print $3 }'`
-	fmt_printline "  Smallest file to work on"				"${page_size} (KB)"
+	fmt_printline "  Smallest file to work on"				"${min_file_size} (KB)"
 	fmt_printline "  90% of Free disk space available"			"${free_space} (MB)"
 
 	if [ ${do_incache} -eq 1 ]; then
@@ -999,22 +999,22 @@ execute_iozone()
 	        #Avoid mixing auto flags with throughput mode flags
         if [[ ${auto} == 1 ]]; then
                 if [[ ${do_incache} -eq 1 ]]; then
-                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m"
+                        test_specific_args=" -n ${min_file_size}k -g ${incache_maxfile}m -y 1k -q 1m"
                         do_test "In_Cache" "incache" ${test_specific_args}
                 fi
 
                 if [[ ${do_incache_fsync} -eq 1 ]]; then
-                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
+                        test_specific_args=" -n ${min_file_size}k -g ${incache_maxfile}m -y 1k -q 1m -e"
                         do_test "In_Cache_+_Fsync" "incache+fsync" ${test_specific_args}
                 fi
 
                 if [[ ${do_incache_mmap} -eq 1 ]]; then
-                        test_specific_args=" -n ${page_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
+                        test_specific_args=" -n ${min_file_size}k -g ${incache_maxfile}m -y 1k -q 1m -B"
                         do_test "In_Cache_w_MMAP" "incache+mmap" ${test_specific_args}
                 fi
 
 		if [[ ${do_dio} -eq 1 ]]; then 
-                        test_specific_args="-I -n ${page_size}k -g ${dio_maxfile}m -y 64k -q 1m -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
+                        test_specific_args="-I -n ${min_file_size}k -g ${dio_maxfile}m -y 64k -q 1m -i 0 -i 1 -i 2 -i 3 -i 4 -i 5"
                         do_test "Direct_IO" "directio" ${test_specific_args}
                 fi
 
@@ -1538,7 +1538,7 @@ ARGUMENT_LIST=(
 	"iterations"
 	"iozone_options"
 	"outcache_multiplier"
-	"page_size"
+	"min_file_size"
 	"quick"
 	"results_dir"
 	"test_prefix"
@@ -1667,8 +1667,8 @@ while [[ $# -gt 0 ]]; do
 			outcache_multiplier=$2
 			shift 1
 		;;
-		--page_size)
-			page_size=$2
+		--min_file_size)
+			min_file_size=$2
 			shift 1
 		;;
 		--quick)
