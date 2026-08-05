@@ -227,7 +227,7 @@ usage()
 	echo "auto: operate in auto mode"
 	echo "iozone_umount: remount between tests.  Only 1 mount point supported."
 	echo "    Defaul is no"
-	echo "min_file_size <x>: Minimum file size in kBytes for auto mode. Default is 1024"
+	echo "min_file_size <x>: Minimum file size in kBytes for auto mode and record size for throughput mode. Default is 1024"
 	echo "quick <x>: Factor used to speed-up the runs."
 	echo "   incache_memory=incache_memory/do_quick.  Default is 1"
 	echo "test_type: Comma separated list of tests to run.  Default is 0,1"
