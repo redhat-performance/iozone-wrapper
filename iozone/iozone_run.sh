@@ -1529,6 +1529,7 @@ ARGUMENT_LIST=(
 	"dio_filelimit"
 	"eatmem_out_of_cache_start"
 	"eatmem_out_of_cache_end"
+	"eatmem_free_memory"
 	"file_count_list"
 	"filesystems"
 	"max_file_size"
