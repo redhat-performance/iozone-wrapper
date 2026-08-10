@@ -451,7 +451,7 @@ retrieve_and_build_iozone()
 		#
 		# We need to build iozone. Go get the kit.
 		#
-		wget http://www.iozone.org/src/current/${iozone_kit}.tar
+		wget https://www.iozone.org/src/current/${iozone_kit}.tar
 		if [ $? -ne 0 ]; then
 			exit_out "wget http://www.iozone.org/src/current/${iozone_kit}.tar failed" 1
 		fi
