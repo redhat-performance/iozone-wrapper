@@ -453,7 +453,7 @@ retrieve_and_build_iozone()
 		#
 		wget https://www.iozone.org/src/current/${iozone_kit}.tar
 		if [ $? -ne 0 ]; then
-			exit_out "wget http://www.iozone.org/src/current/${iozone_kit}.tar failed" 1
+			exit_out "wget https://www.iozone.org/src/current/${iozone_kit}.tar failed" 1
 		fi
 		tar xf ${iozone_kit}.tar
 		#
