@@ -152,7 +152,7 @@ The `iozone_run.sh` script performs the following workflow:
 
 ## Dependencies
 
-Location of underlying workload: Downloaded from http://www.iozone.org/src/current/ (default: iozone3_490).
+Location of underlying workload: Downloaded from https://www.iozone.org/src/current/ (default: iozone3_490).
 
 **General packages required**: bc, gcc, git, make, wget, unzip, zip
 
